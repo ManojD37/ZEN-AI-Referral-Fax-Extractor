@@ -1,0 +1,12 @@
+# backend/.dockerignore
+.env
+.env.local
+.env.* 
+*.pyc
+__pycache__
+.venv
+venv
+node_modules
+.DS_Store
+.git
+.gitignore
