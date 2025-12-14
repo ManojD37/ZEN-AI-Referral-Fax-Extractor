@@ -1,5 +1,6 @@
 |-- .gitignore
 |-- backend
+    |-- .dockerignore
     |-- .env
     |-- .venv
         |-- etc
@@ -17595,7 +17596,6 @@
         |-- index.css
         |-- index.js
         |-- logo.svg
-        |-- pages
         |-- reportWebVitals.js
         |-- services
             |-- api.js
@@ -17603,3 +17603,4 @@
         |-- setupTests.js
     |-- tailwind.config.js
 |-- docker-compose.yaml
+|-- README.md

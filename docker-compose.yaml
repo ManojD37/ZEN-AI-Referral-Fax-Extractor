@@ -1,32 +1,81 @@
-version: '3.8'
+# version: '3.8'
+
+# services:
+#   # Backend Service
+#   backend:
+#     build: ./backend
+#     container_name: medical-referral-server
+#     ports:
+#       - "8000:8000"
+#     volumes:
+#       - ./backend/app:/app/app
+#       - ./backend/uploads:/app/uploads
+#       - ./backend/.env:/app/.env
+#     env_file:
+#       - ./backend/.env
+#     restart: unless-stopped
+#     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+#     networks:
+#       - app-network
+
+#   # Frontend Service
+#   frontend:
+#     build: ./client
+#     container_name: medical-referral-client
+#     ports:
+#       - "3000:80"
+#     depends_on:
+#       - backend
+#     restart: unless-stopped
+#     networks:
+#       - app-network
+
+# networks:
+#   app-network:
+#     driver: bridge
+#--------------------------------
+
+version: "3.8"
 
 services:
-  # Backend Service
   backend:
-    build: ./backend
-    container_name: medical-referral-server
+    image: python:3.11-slim
+    container_name: medical-referral-backend-dev
+    working_dir: /app
     ports:
       - "8000:8000"
     volumes:
       - ./backend/app:/app/app
-      - ./backend/uploads:/app/uploads
+      - ./backend/requirements.txt:/app/requirements.txt
       - ./backend/.env:/app/.env
     env_file:
       - ./backend/.env
-    restart: unless-stopped
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: >
+      sh -c "
+      pip install -r requirements.txt &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app
+      "
     networks:
       - app-network
 
-  # Frontend Service
   frontend:
-    build: ./client
-    container_name: medical-referral-client
+    image: node:20-alpine
+    container_name: medical-referral-frontend-dev
+    working_dir: /app
     ports:
-      - "3000:80"
+      - "3000:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    command: >
+      sh -c "
+      npm install &&
+      npm start
+      "
     depends_on:
       - backend
-    restart: unless-stopped
     networks:
       - app-network
 

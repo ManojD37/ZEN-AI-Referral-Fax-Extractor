@@ -1,10 +1,5 @@
 
 
-
-
-
-
-
 // src/components/FilePreview.jsx
 import React, { useState, useEffect } from 'react';
 import { FileText, Image as ImageIcon, File, AlertCircle } from 'lucide-react';
