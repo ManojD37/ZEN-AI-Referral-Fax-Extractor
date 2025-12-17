@@ -4,7 +4,7 @@ import uuid
 import tempfile
 from pathlib import Path
 from fastapi import UploadFile, HTTPException
-from .config import (
+from config import (
     UPLOAD_DIR, 
     USE_BLOB_STORAGE, 
     AZURE_STORAGE_CONNECTION_STRING,

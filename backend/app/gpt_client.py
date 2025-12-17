@@ -2,7 +2,7 @@
 import json
 import re
 from typing import Any, Dict
-from .config import (
+from config import (
     AZURE_OPENAI_ENDPOINT,
     AZURE_OPENAI_API_KEY,
     AZURE_OPENAI_DEPLOYMENT,

@@ -17559,6 +17559,7 @@
             |-- __init__.cpython-311.pyc
             |-- __init__.cpython-39.pyc
     |-- checkdns.py
+    |-- details
     |-- docker-compose.yaml
     |-- Dockerfile
     |-- list_deployment.py
