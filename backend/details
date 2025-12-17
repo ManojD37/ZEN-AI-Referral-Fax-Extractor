@@ -1,4 +1,4 @@
-AZURE_STORAGE_ACCOUNT=eusaifax
+AZURE_STORAGE_ACCOUNT=eusaaifax
 AZURE_STORAGE_KEY=RE1V41YF+PhwBGoeSokrdk6axUL8B/jpI/Gti91MKlh7DBEs2cxfE68uTJlrOr478gNLvtMrkJBW+AStKi17uQ==
 AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=eusaaifax;AccountKey=RE1V41YF+PhwBGoeSokrdk6axUL8B/jpI/Gti91MKlh7DBEs2cxfE68uTJlrOr478gNLvtMrkJBW+AStKi17uQ==;EndpointSuffix=core.windows.net
 AZURE_BLOB_CONTAINER=fileupload-demoinfiniteindex
