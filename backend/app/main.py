@@ -3,15 +3,15 @@ import sys
 import time
 from pathlib import Path
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from middleware.cors import CORSMiddleware
+from responses import JSONResponse
 from utils import save_upload_tmp, cleanup_path
 from text_extractor import extract_text_with_metadata
 from gpt_client import extract_referral_from_text
 from schemas import ReferralExtraction
 from json_schema import JSON_SCHEMA
 from classifier import classify_document
-from app.log import logger
+from log import logger
 
 # Ensure path for relative imports
 ROOT = Path(__file__).resolve().parents[1]
