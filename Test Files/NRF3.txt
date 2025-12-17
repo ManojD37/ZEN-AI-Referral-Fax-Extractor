@@ -1,0 +1,15 @@
+Patient: Anita Sharma
+Age: 32
+
+Diagnosis:
+Mild viral fever
+
+Prescription:
+- Paracetamol 650 mg – twice daily for 3 days
+- Adequate fluids and rest
+
+Advice:
+Review only if symptoms worsen.
+
+Doctor:
+Dr. K. Meena

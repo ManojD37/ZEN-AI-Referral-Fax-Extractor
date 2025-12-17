@@ -1,0 +1,90 @@
+
+ANNEX I.VI PATIENT REFERRAL FORM
+
+For questions regarding referrals, please contact Insert Name at ##-###-####.
+
+Page 1 of 2
+
+Country, Event, Year
+
+Patient Referral Form
+
+Date: 23/11/2025
+
+Referral to: Maya Das Medical Center
+Focal point: Lucas Nair     Phone: +91-362-5994931
+Location: District 9     Email: example@who.int
+
+Referring from: Sophia Wilson Hospital
+Focal point: Ishaan Kumar     Phone: +91-302-4923316
+Location: Block 8     Email: example@hospital.org
+
+------------------------------------
+Patient Information
+------------------------------------
+
+Full Name: Maya Wilson      Phone: +91-491-5356885
+Date of birth: 08/06/1951     Gender: Female
+Address of discharge destination: Address #668, Street XYZ
+
+Accompanied by care provider: No
+
+Primary Diagnoses:
+1. Fracture
+2. Abdominal pain
+3. Fracture
+
+Other Diagnoses:
+- Dehydration
+
+Treatments initiated:
+• Treatment A (Ongoing)
+• Treatment B (Completed)
+• Treatment C (Completed)
+• Treatment D (Ongoing)
+• Treatment E (Ongoing)
+• Treatment F (Ongoing)
+
+*Please attach medication chart at discharge
+
+------------------------------------
+Page 2 of 2
+------------------------------------
+
+Reason for referral:
+Community
+
+Transportation needs:
+- Detail 1
+- Detail 2
+
+Follow-up requirements:
+- Detail 1
+- Detail 2
+
+Functional Status:
+
+Mobility: Bed bound
+Precautions: Spinal precautions
+
+Self-care: Requires commode
+
+Cognitive impairment: Yes
+
+Assistive devices provided:
+- Detail 1
+- Detail 2
+
+Assistive devices required:
+- Detail 1
+- Detail 2
+
+Compiled by: Olivia Martinez
+Signature: _______________________
+Position: Medical Officer
+
+NOTE: This form must accompany the patient’s file and a copy should be retained.
+
+END OF REFERRAL FORM
+
+FILE NUMBER: 002

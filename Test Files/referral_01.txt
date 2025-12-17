@@ -1,0 +1,90 @@
+
+ANNEX I.VI PATIENT REFERRAL FORM
+
+For questions regarding referrals, please contact Insert Name at ##-###-####.
+
+Page 1 of 2
+
+Country, Event, Year
+
+Patient Referral Form
+
+Date: 23/11/2025
+
+Referral to: Aarav Nair Medical Center
+Focal point: Priya Patel     Phone: +91-244-1534485
+Location: District 3     Email: example@who.int
+
+Referring from: Emma Martinez Hospital
+Focal point: Rohan Kumar     Phone: +91-921-2457176
+Location: Block 20     Email: example@hospital.org
+
+------------------------------------
+Patient Information
+------------------------------------
+
+Full Name: Lucas Kumar      Phone: +91-166-6222072
+Date of birth: 20/01/1980     Gender: Male
+Address of discharge destination: Address #634, Street XYZ
+
+Accompanied by care provider: No
+
+Primary Diagnoses:
+1. Abdominal pain
+2. Cardiac issue
+3. Dehydration
+
+Other Diagnoses:
+- Cardiac issue
+
+Treatments initiated:
+• Treatment A (Ongoing)
+• Treatment B (Completed)
+• Treatment C (Completed)
+• Treatment D (Completed)
+• Treatment E (Ongoing)
+• Treatment F (Ongoing)
+
+*Please attach medication chart at discharge
+
+------------------------------------
+Page 2 of 2
+------------------------------------
+
+Reason for referral:
+Community
+
+Transportation needs:
+- Detail 1
+- Detail 2
+
+Follow-up requirements:
+- Detail 1
+- Detail 2
+
+Functional Status:
+
+Mobility: Crutches
+Precautions: None
+
+Self-care: Requires commode
+
+Cognitive impairment: No
+
+Assistive devices provided:
+- Detail 1
+- Detail 2
+
+Assistive devices required:
+- Detail 1
+- Detail 2
+
+Compiled by: Lucas Martinez
+Signature: _______________________
+Position: Medical Officer
+
+NOTE: This form must accompany the patient’s file and a copy should be retained.
+
+END OF REFERRAL FORM
+
+FILE NUMBER: 001

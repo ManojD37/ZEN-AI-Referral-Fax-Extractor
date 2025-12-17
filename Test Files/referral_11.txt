@@ -1,0 +1,90 @@
+
+ANNEX I.VI PATIENT REFERRAL FORM
+
+For questions regarding referrals, please contact Insert Name at ##-###-####.
+
+Page 1 of 2
+
+Country, Event, Year
+
+Patient Referral Form
+
+Date: 23/11/2025
+
+Referral to: Aarav Patel Medical Center
+Focal point: Emma Kumar     Phone: +91-920-7794663
+Location: District 10     Email: example@who.int
+
+Referring from: Emma Gupta Hospital
+Focal point: Sophia Nair     Phone: +91-816-9608128
+Location: Block 11     Email: example@hospital.org
+
+------------------------------------
+Patient Information
+------------------------------------
+
+Full Name: Ishaan Das      Phone: +91-975-4197441
+Date of birth: 23/03/1976     Gender: Female
+Address of discharge destination: Address #836, Street XYZ
+
+Accompanied by care provider: No
+
+Primary Diagnoses:
+1. Dehydration
+2. Head injury
+3. Fracture
+
+Other Diagnoses:
+- Abdominal pain
+
+Treatments initiated:
+• Treatment A (Ongoing)
+• Treatment B (Ongoing)
+• Treatment C (Completed)
+• Treatment D (Ongoing)
+• Treatment E (Ongoing)
+• Treatment F (Ongoing)
+
+*Please attach medication chart at discharge
+
+------------------------------------
+Page 2 of 2
+------------------------------------
+
+Reason for referral:
+Inpatient
+
+Transportation needs:
+- Detail 1
+- Detail 2
+
+Follow-up requirements:
+- Detail 1
+- Detail 2
+
+Functional Status:
+
+Mobility: Bed bound
+Precautions: Spinal precautions
+
+Self-care: Requires commode
+
+Cognitive impairment: No
+
+Assistive devices provided:
+- Detail 1
+- Detail 2
+
+Assistive devices required:
+- Detail 1
+- Detail 2
+
+Compiled by: Aarav Nair
+Signature: _______________________
+Position: Medical Officer
+
+NOTE: This form must accompany the patient’s file and a copy should be retained.
+
+END OF REFERRAL FORM
+
+FILE NUMBER: 011

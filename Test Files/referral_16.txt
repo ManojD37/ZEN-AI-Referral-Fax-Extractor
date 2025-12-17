@@ -1,0 +1,90 @@
+
+ANNEX I.VI PATIENT REFERRAL FORM
+
+For questions regarding referrals, please contact Insert Name at ##-###-####.
+
+Page 1 of 2
+
+Country, Event, Year
+
+Patient Referral Form
+
+Date: 23/11/2025
+
+Referral to: Ishaan Nair Medical Center
+Focal point: Zara Wilson     Phone: +91-375-9971650
+Location: District 1     Email: example@who.int
+
+Referring from: Rohan Reddy Hospital
+Focal point: Lucas Patel     Phone: +91-584-4678646
+Location: Block 8     Email: example@hospital.org
+
+------------------------------------
+Patient Information
+------------------------------------
+
+Full Name: Kavya Gupta      Phone: +91-442-4649116
+Date of birth: 24/05/1958     Gender: Male
+Address of discharge destination: Address #815, Street XYZ
+
+Accompanied by care provider: No
+
+Primary Diagnoses:
+1. Respiratory distress
+2. Head injury
+3. Fracture
+
+Other Diagnoses:
+- Respiratory distress
+
+Treatments initiated:
+• Treatment A (Completed)
+• Treatment B (Completed)
+• Treatment C (Completed)
+• Treatment D (Ongoing)
+• Treatment E (Completed)
+• Treatment F (Ongoing)
+
+*Please attach medication chart at discharge
+
+------------------------------------
+Page 2 of 2
+------------------------------------
+
+Reason for referral:
+Community
+
+Transportation needs:
+- Detail 1
+- Detail 2
+
+Follow-up requirements:
+- Detail 1
+- Detail 2
+
+Functional Status:
+
+Mobility: Walking frame
+Precautions: Weight-bearing restricted
+
+Self-care: Carer dependent
+
+Cognitive impairment: Yes
+
+Assistive devices provided:
+- Detail 1
+- Detail 2
+
+Assistive devices required:
+- Detail 1
+- Detail 2
+
+Compiled by: Arjun Singh
+Signature: _______________________
+Position: Medical Officer
+
+NOTE: This form must accompany the patient’s file and a copy should be retained.
+
+END OF REFERRAL FORM
+
+FILE NUMBER: 016

@@ -1,0 +1,90 @@
+
+ANNEX I.VI PATIENT REFERRAL FORM
+
+For questions regarding referrals, please contact Insert Name at ##-###-####.
+
+Page 1 of 2
+
+Country, Event, Year
+
+Patient Referral Form
+
+Date: 23/11/2025
+
+Referral to: Maya Reddy Medical Center
+Focal point: Ananya Singh     Phone: +91-653-3663321
+Location: District 5     Email: example@who.int
+
+Referring from: Maya Brown Hospital
+Focal point: Lucas Johnson     Phone: +91-721-4951960
+Location: Block 4     Email: example@hospital.org
+
+------------------------------------
+Patient Information
+------------------------------------
+
+Full Name: Olivia Reddy      Phone: +91-828-1130188
+Date of birth: 22/10/2002     Gender: Female
+Address of discharge destination: Address #880, Street XYZ
+
+Accompanied by care provider: Yes
+
+Primary Diagnoses:
+1. Abdominal pain
+2. Abdominal pain
+3. Respiratory distress
+
+Other Diagnoses:
+- Fracture
+
+Treatments initiated:
+• Treatment A (Completed)
+• Treatment B (Completed)
+• Treatment C (Completed)
+• Treatment D (Completed)
+• Treatment E (Ongoing)
+• Treatment F (Completed)
+
+*Please attach medication chart at discharge
+
+------------------------------------
+Page 2 of 2
+------------------------------------
+
+Reason for referral:
+Inpatient
+
+Transportation needs:
+- Detail 1
+- Detail 2
+
+Follow-up requirements:
+- Detail 1
+- Detail 2
+
+Functional Status:
+
+Mobility: Walking frame
+Precautions: None
+
+Self-care: Independent
+
+Cognitive impairment: No
+
+Assistive devices provided:
+- Detail 1
+- Detail 2
+
+Assistive devices required:
+- Detail 1
+- Detail 2
+
+Compiled by: Kavya Das
+Signature: _______________________
+Position: Medical Officer
+
+NOTE: This form must accompany the patient’s file and a copy should be retained.
+
+END OF REFERRAL FORM
+
+FILE NUMBER: 005

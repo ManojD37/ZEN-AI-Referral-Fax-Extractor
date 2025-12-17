@@ -1,0 +1,90 @@
+
+ANNEX I.VI PATIENT REFERRAL FORM
+
+For questions regarding referrals, please contact Insert Name at ##-###-####.
+
+Page 1 of 2
+
+Country, Event, Year
+
+Patient Referral Form
+
+Date: 23/11/2025
+
+Referral to: Olivia Reddy Medical Center
+Focal point: Aarav Reddy     Phone: +91-787-2804552
+Location: District 2     Email: example@who.int
+
+Referring from: Ananya Brown Hospital
+Focal point: Maya Gupta     Phone: +91-820-5608718
+Location: Block 3     Email: example@hospital.org
+
+------------------------------------
+Patient Information
+------------------------------------
+
+Full Name: Priya Wilson      Phone: +91-324-3453869
+Date of birth: 07/06/2006     Gender: Other
+Address of discharge destination: Address #948, Street XYZ
+
+Accompanied by care provider: No
+
+Primary Diagnoses:
+1. Respiratory distress
+2. Cardiac issue
+3. Fracture
+
+Other Diagnoses:
+- Spinal injury
+
+Treatments initiated:
+• Treatment A (Completed)
+• Treatment B (Completed)
+• Treatment C (Ongoing)
+• Treatment D (Completed)
+• Treatment E (Completed)
+• Treatment F (Ongoing)
+
+*Please attach medication chart at discharge
+
+------------------------------------
+Page 2 of 2
+------------------------------------
+
+Reason for referral:
+Inpatient
+
+Transportation needs:
+- Detail 1
+- Detail 2
+
+Follow-up requirements:
+- Detail 1
+- Detail 2
+
+Functional Status:
+
+Mobility: Bed bound
+Precautions: Spinal precautions
+
+Self-care: Carer dependent
+
+Cognitive impairment: Yes
+
+Assistive devices provided:
+- Detail 1
+- Detail 2
+
+Assistive devices required:
+- Detail 1
+- Detail 2
+
+Compiled by: Aarav Sharma
+Signature: _______________________
+Position: Medical Officer
+
+NOTE: This form must accompany the patient’s file and a copy should be retained.
+
+END OF REFERRAL FORM
+
+FILE NUMBER: 014

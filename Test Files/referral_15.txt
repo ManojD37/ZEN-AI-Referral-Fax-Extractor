@@ -1,0 +1,90 @@
+
+ANNEX I.VI PATIENT REFERRAL FORM
+
+For questions regarding referrals, please contact Insert Name at ##-###-####.
+
+Page 1 of 2
+
+Country, Event, Year
+
+Patient Referral Form
+
+Date: 23/11/2025
+
+Referral to: Noah Sharma Medical Center
+Focal point: Maya Brown     Phone: +91-709-8053084
+Location: District 9     Email: example@who.int
+
+Referring from: Meera Sharma Hospital
+Focal point: Rohan Reddy     Phone: +91-864-2461394
+Location: Block 18     Email: example@hospital.org
+
+------------------------------------
+Patient Information
+------------------------------------
+
+Full Name: Kavya Patel      Phone: +91-854-1479813
+Date of birth: 24/09/1970     Gender: Female
+Address of discharge destination: Address #312, Street XYZ
+
+Accompanied by care provider: Yes
+
+Primary Diagnoses:
+1. Fracture
+2. Dehydration
+3. Head injury
+
+Other Diagnoses:
+- Respiratory distress
+
+Treatments initiated:
+• Treatment A (Ongoing)
+• Treatment B (Completed)
+• Treatment C (Ongoing)
+• Treatment D (Completed)
+• Treatment E (Ongoing)
+• Treatment F (Completed)
+
+*Please attach medication chart at discharge
+
+------------------------------------
+Page 2 of 2
+------------------------------------
+
+Reason for referral:
+Outpatient
+
+Transportation needs:
+- Detail 1
+- Detail 2
+
+Follow-up requirements:
+- Detail 1
+- Detail 2
+
+Functional Status:
+
+Mobility: Bed bound
+Precautions: Weight-bearing restricted
+
+Self-care: Requires commode
+
+Cognitive impairment: No
+
+Assistive devices provided:
+- Detail 1
+- Detail 2
+
+Assistive devices required:
+- Detail 1
+- Detail 2
+
+Compiled by: Priya Das
+Signature: _______________________
+Position: Medical Officer
+
+NOTE: This form must accompany the patient’s file and a copy should be retained.
+
+END OF REFERRAL FORM
+
+FILE NUMBER: 015

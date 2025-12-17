@@ -1,0 +1,90 @@
+
+ANNEX I.VI PATIENT REFERRAL FORM
+
+For questions regarding referrals, please contact Insert Name at ##-###-####.
+
+Page 1 of 2
+
+Country, Event, Year
+
+Patient Referral Form
+
+Date: 23/11/2025
+
+Referral to: Maya Nair Medical Center
+Focal point: Ananya Singh     Phone: +91-320-6540785
+Location: District 6     Email: example@who.int
+
+Referring from: Ananya Singh Hospital
+Focal point: Lucas Singh     Phone: +91-533-9253535
+Location: Block 11     Email: example@hospital.org
+
+------------------------------------
+Patient Information
+------------------------------------
+
+Full Name: Maya Patel      Phone: +91-551-2048189
+Date of birth: 19/04/1974     Gender: Other
+Address of discharge destination: Address #546, Street XYZ
+
+Accompanied by care provider: Yes
+
+Primary Diagnoses:
+1. Fracture
+2. Burn injury
+3. Burn injury
+
+Other Diagnoses:
+- Respiratory distress
+
+Treatments initiated:
+• Treatment A (Ongoing)
+• Treatment B (Ongoing)
+• Treatment C (Ongoing)
+• Treatment D (Ongoing)
+• Treatment E (Completed)
+• Treatment F (Ongoing)
+
+*Please attach medication chart at discharge
+
+------------------------------------
+Page 2 of 2
+------------------------------------
+
+Reason for referral:
+Outpatient
+
+Transportation needs:
+- Detail 1
+- Detail 2
+
+Follow-up requirements:
+- Detail 1
+- Detail 2
+
+Functional Status:
+
+Mobility: Bed bound
+Precautions: None
+
+Self-care: Independent
+
+Cognitive impairment: Yes
+
+Assistive devices provided:
+- Detail 1
+- Detail 2
+
+Assistive devices required:
+- Detail 1
+- Detail 2
+
+Compiled by: Emma Singh
+Signature: _______________________
+Position: Medical Officer
+
+NOTE: This form must accompany the patient’s file and a copy should be retained.
+
+END OF REFERRAL FORM
+
+FILE NUMBER: 017

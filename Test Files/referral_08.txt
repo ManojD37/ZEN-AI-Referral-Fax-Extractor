@@ -1,0 +1,90 @@
+
+ANNEX I.VI PATIENT REFERRAL FORM
+
+For questions regarding referrals, please contact Insert Name at ##-###-####.
+
+Page 1 of 2
+
+Country, Event, Year
+
+Patient Referral Form
+
+Date: 23/11/2025
+
+Referral to: Lucas Kumar Medical Center
+Focal point: Sophia Brown     Phone: +91-254-1226619
+Location: District 9     Email: example@who.int
+
+Referring from: Meera Brown Hospital
+Focal point: Lucas Martinez     Phone: +91-208-4347544
+Location: Block 18     Email: example@hospital.org
+
+------------------------------------
+Patient Information
+------------------------------------
+
+Full Name: Arjun Kumar      Phone: +91-859-3335515
+Date of birth: 20/04/2011     Gender: Other
+Address of discharge destination: Address #189, Street XYZ
+
+Accompanied by care provider: Yes
+
+Primary Diagnoses:
+1. Fracture
+2. Respiratory distress
+3. Abdominal pain
+
+Other Diagnoses:
+- Dehydration
+
+Treatments initiated:
+• Treatment A (Ongoing)
+• Treatment B (Ongoing)
+• Treatment C (Completed)
+• Treatment D (Ongoing)
+• Treatment E (Ongoing)
+• Treatment F (Ongoing)
+
+*Please attach medication chart at discharge
+
+------------------------------------
+Page 2 of 2
+------------------------------------
+
+Reason for referral:
+Outpatient
+
+Transportation needs:
+- Detail 1
+- Detail 2
+
+Follow-up requirements:
+- Detail 1
+- Detail 2
+
+Functional Status:
+
+Mobility: Independent
+Precautions: Spinal precautions
+
+Self-care: Requires commode
+
+Cognitive impairment: No
+
+Assistive devices provided:
+- Detail 1
+- Detail 2
+
+Assistive devices required:
+- Detail 1
+- Detail 2
+
+Compiled by: Olivia Johnson
+Signature: _______________________
+Position: Medical Officer
+
+NOTE: This form must accompany the patient’s file and a copy should be retained.
+
+END OF REFERRAL FORM
+
+FILE NUMBER: 008

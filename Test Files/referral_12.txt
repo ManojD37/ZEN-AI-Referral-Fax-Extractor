@@ -1,0 +1,90 @@
+
+ANNEX I.VI PATIENT REFERRAL FORM
+
+For questions regarding referrals, please contact Insert Name at ##-###-####.
+
+Page 1 of 2
+
+Country, Event, Year
+
+Patient Referral Form
+
+Date: 23/11/2025
+
+Referral to: Meera Patel Medical Center
+Focal point: Aarav Wilson     Phone: +91-274-1925074
+Location: District 4     Email: example@who.int
+
+Referring from: Meera Das Hospital
+Focal point: Ananya Reddy     Phone: +91-691-9062868
+Location: Block 14     Email: example@hospital.org
+
+------------------------------------
+Patient Information
+------------------------------------
+
+Full Name: Zara Kumar      Phone: +91-531-3013412
+Date of birth: 03/01/1978     Gender: Male
+Address of discharge destination: Address #992, Street XYZ
+
+Accompanied by care provider: Yes
+
+Primary Diagnoses:
+1. Dehydration
+2. Spinal injury
+3. Burn injury
+
+Other Diagnoses:
+- Head injury
+
+Treatments initiated:
+• Treatment A (Completed)
+• Treatment B (Completed)
+• Treatment C (Completed)
+• Treatment D (Ongoing)
+• Treatment E (Completed)
+• Treatment F (Completed)
+
+*Please attach medication chart at discharge
+
+------------------------------------
+Page 2 of 2
+------------------------------------
+
+Reason for referral:
+Inpatient
+
+Transportation needs:
+- Detail 1
+- Detail 2
+
+Follow-up requirements:
+- Detail 1
+- Detail 2
+
+Functional Status:
+
+Mobility: Walking frame
+Precautions: Weight-bearing restricted
+
+Self-care: Requires commode
+
+Cognitive impairment: Yes
+
+Assistive devices provided:
+- Detail 1
+- Detail 2
+
+Assistive devices required:
+- Detail 1
+- Detail 2
+
+Compiled by: Priya Das
+Signature: _______________________
+Position: Medical Officer
+
+NOTE: This form must accompany the patient’s file and a copy should be retained.
+
+END OF REFERRAL FORM
+
+FILE NUMBER: 012
