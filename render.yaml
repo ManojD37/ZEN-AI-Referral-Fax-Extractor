@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: medical-referral-extractor
+    env: docker
+    plan: free
+    region: oregon # or frankfurt, etc.
+    branch: production
+    numInstances: 1
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: PYTHONUNBUFFERED
+        value: 1
+      - key: AZURE_OPENAI_API_KEY
+        sync: false # User will input this in dashboard
+      - key: AZURE_OPENAI_ENDPOINT
+        sync: false
+      - key: AZURE_OPENAI_DEPLOYMENT
+        sync: false
+      - key: AZURE_OPENAI_API_VERSION
+        sync: false
+      - key: AZURE_STORAGE_CONNECTION_STRING
+        sync: false
+      - key: AZURE_BLOB_CONTAINER
+        sync: false
