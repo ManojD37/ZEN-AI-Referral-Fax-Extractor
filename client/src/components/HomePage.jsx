@@ -251,27 +251,40 @@ const HomePage = () => {
           </p>
         </div>
         
-        {supportedFormats && (
+        {supportedFormats && supportedFormats.supported_formats && (
           <div className="bg-white rounded-2xl shadow-xl p-10 max-w-4xl mx-auto border border-gray-100">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {supportedFormats.supported_formats.map((format, index) => (
-                <div
-                  key={format}
-                  className="flex items-start space-x-4 p-5 bg-gradient-to-br from-slate-50 to-blue-50 
-                           rounded-xl hover:shadow-lg transition-all duration-300 border border-gray-100
-                           hover:border-blue-200"
-                >
-                  <div className="bg-green-100 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="h-6 w-6 text-green-600" />
+              {supportedFormats.supported_formats.map((format) => {
+                // Fallback descriptions if backend doesn't provide them
+                const fallbackDescriptions = {
+                  '.pdf': 'Portable Document Format (OCR)',
+                  '.jpg': 'JPEG Image (OCR)',
+                  '.jpeg': 'JPEG Image (OCR)',
+                  '.png': 'PNG Image (OCR)',
+                  '.txt': 'Plain Text',
+                  '.docx': 'Microsoft Word Document'
+                };
+                const description = supportedFormats.descriptions?.[format] || fallbackDescriptions[format] || 'Supported format';
+                
+                return (
+                  <div
+                    key={format}
+                    className="flex items-start space-x-4 p-5 bg-gradient-to-br from-slate-50 to-blue-50 
+                             rounded-xl hover:shadow-lg transition-all duration-300 border border-gray-100
+                             hover:border-blue-200"
+                  >
+                    <div className="bg-green-100 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-800 mb-1">{format}</p>
+                      <p className="text-sm text-gray-600 leading-relaxed">
+                        {description}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-bold text-gray-800 mb-1">{format}</p>
-                    <p className="text-sm text-gray-600 leading-relaxed">
-                      {supportedFormats.descriptions[format]}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

@@ -3,15 +3,16 @@ import sys
 import time
 from pathlib import Path
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request
-from middleware.cors import CORSMiddleware
-from responses import JSONResponse
-from utils import save_upload_tmp, cleanup_path
-from text_extractor import extract_text_with_metadata
-from gpt_client import extract_referral_from_text
-from schemas import ReferralExtraction
-from json_schema import JSON_SCHEMA
-from classifier import classify_document
-from log import logger
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+from app.text_extractor import extract_with_metadata
+from app.gpt_client import extract_referral_from_text, extract_referral_from_images
+from app.schemas import ReferralExtraction
+from app.json_schema import JSON_SCHEMA
+from app.classifier import classify_document
+from app.log import logger
+from app.blob_storage import blob_service
 
 # Ensure path for relative imports
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,353 +21,268 @@ sys.path.insert(0, str(ROOT))
 # ========== FASTAPI APP INITIALIZATION ==========
 app = FastAPI(
     title="medical-referral-extractor",
-    version="1.0.0",
-    description="Medical referral document extraction service"
+    version="2.0.0",
+    description="Medical referral document extraction service with Streamlit UI"
 )
 
-# ========== CORS MIDDLEWARE ==========
+# ========== CORS ==========
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://localhost:8501",  # Streamlit default
+        "http://127.0.0.1:8501",
         "http://localhost",
-        "https://zen-ai-referral-fax-extractor.vercel.app"
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
 # ========== SUPPORTED FORMATS ==========
 SUPPORTED_EXTENSIONS = {'.pdf', '.jpg', '.jpeg', '.png', '.txt', '.docx'}
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
-# ========== MIDDLEWARE: REQUEST LOGGING ==========
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    """Log all incoming requests and responses."""
-    start = time.time()
-    
-    try:
-        client_host = request.client.host if request.client else "unknown"
-        logger.info(f"→ {request.method} {request.url.path} from {client_host}")
-    except Exception:
-        logger.info(f"→ {request.method} {request.url.path}")
-    
-    try:
-        response = await call_next(request)
-    except Exception as exc:
-        duration = (time.time() - start) * 1000
-        logger.error(
-            f"✗ {request.method} {request.url.path} - "
-            f"Exception after {duration:.1f}ms: {exc}"
-        )
-        raise
-    
-    duration = (time.time() - start) * 1000
-    status_icon = "✓" if 200 <= response.status_code < 300 else "✗"
-    logger.info(
-        f"{status_icon} {request.method} {request.url.path} → "
-        f"{response.status_code} ({duration:.1f}ms)"
-    )
-    return response
-
-# ========== STARTUP & SHUTDOWN EVENTS ==========
-@app.on_event("startup")
-async def on_startup():
-    """Initialize on application startup."""
-    logger.info("=" * 60)
-    logger.info("🚀 Starting Medical Referral Extractor")
-    logger.info("=" * 60)
-    logger.info(f"Supported file types: {', '.join(sorted(SUPPORTED_EXTENSIONS))}")
-    logger.info("=" * 60)
-
-@app.on_event("shutdown")
-async def on_shutdown():
-    """Cleanup on application shutdown."""
-    logger.info("=" * 60)
-    logger.info("🛑 Shutting down Medical Referral Extractor")
-    logger.info("=" * 60)
-
-# ========== HEALTH CHECK ENDPOINT ==========
+# ========== HEALTH ==========
 @app.get("/", tags=["health"])
 async def root():
-    """Health check endpoint."""
-    logger.debug("Health check ping received")
+    logger.info("Health check endpoint called")
     return {
         "status": "healthy",
-        "message": "Medical Referral Extraction Service is running",
+        "service": "medical-referral-extractor",
+        "version": "2.0.0",
         "supported_formats": list(SUPPORTED_EXTENSIONS),
-        "version": "1.0.0"
     }
 
 @app.get("/health", tags=["health"])
 async def health_check():
-    """Detailed health check endpoint."""
     return {
         "status": "ok",
-        "service": "medical-referral-extractor",
         "timestamp": time.time()
     }
 
 
 def ensure_required_fields(data: dict) -> dict:
-    """Ensure all required fields exist with proper defaults."""
-    
-    # Patient field (required)
-    if 'patient' not in data or not isinstance(data['patient'], dict):
-        data['patient'] = {}
-    
-    patient_defaults = {
-        'full_name': None,
-        'date_of_birth': None,
-        'gender': None,
-        'phone': None,
-        'address': None
-    }
-    for key, default_val in patient_defaults.items():
-        if key not in data['patient']:
-            data['patient'][key] = default_val
-    
-    # Referral field (required)
-    if 'referral' not in data or not isinstance(data['referral'], dict):
-        data['referral'] = {}
-    
-    referral_defaults = {
-        'referral_to': None,
-        'referral_focal_point': None,
-        'referral_phone': None,
-        'referral_email': None,
-        'referring_from': None,
-        'referring_focal_point': None,
-        'referring_phone': None,
-        'referring_email': None
-    }
-    for key, default_val in referral_defaults.items():
-        if key not in data['referral']:
-            data['referral'][key] = default_val
-    
-    # Diagnoses field (required)
-    if 'diagnoses' not in data or not isinstance(data['diagnoses'], dict):
-        data['diagnoses'] = {}
-    
-    if 'primary_diagnoses' not in data['diagnoses']:
-        data['diagnoses']['primary_diagnoses'] = []
-    if 'other_diagnoses' not in data['diagnoses']:
-        data['diagnoses']['other_diagnoses'] = []
-    
-    # Document meta field (required)
-    if 'document_meta' not in data or not isinstance(data['document_meta'], dict):
-        data['document_meta'] = {}
-    
-    if 'title' not in data['document_meta']:
-        data['document_meta']['title'] = None
-    if 'date' not in data['document_meta']:
-        data['document_meta']['date'] = None
-    
-    # Optional fields
-    if 'treatments' not in data:
-        data['treatments'] = []
-    elif data['treatments'] is None:
-        data['treatments'] = []
-    
-    if 'reason_for_referral' not in data:
-        data['reason_for_referral'] = None
-    
-    if 'compiled_by' not in data:
-        data['compiled_by'] = None
-    
-    if 'position' not in data:
-        data['position'] = None
-    
-    if 'signature' not in data:
-        data['signature'] = None
-    
-    if 'file_number' not in data:
-        data['file_number'] = None
-    
+    """Ensure all required fields exist in extraction result."""
+    if not isinstance(data, dict):
+        data = {}
+
+    data.setdefault("patient", {})
+    for k in ["full_name", "date_of_birth", "gender", "phone", "address"]:
+        data["patient"].setdefault(k, None)
+
+    data.setdefault("referral", {})
+    for k in [
+        "referral_to", "referral_focal_point", "referral_phone", "referral_email",
+        "referring_from", "referring_focal_point", "referring_phone", "referring_email"
+    ]:
+        data["referral"].setdefault(k, None)
+
+    data.setdefault("diagnoses", {})
+    data["diagnoses"].setdefault("primary_diagnoses", [])
+    data["diagnoses"].setdefault("other_diagnoses", [])
+
+    data.setdefault("document_meta", {})
+    data["document_meta"].setdefault("title", None)
+    data["document_meta"].setdefault("date", None)
+
+    data.setdefault("treatments", [])
+    data.setdefault("reason_for_referral", None)
+    data.setdefault("compiled_by", None)
+    data.setdefault("position", None)
+    data.setdefault("signature", None)
+    data.setdefault("file_number", None)
+
     return data
 
 
-# ========== FILE UPLOAD ENDPOINT ==========
+# ========== FILE UPLOAD ==========
 @app.post("/upload", tags=["upload"])
 async def upload_file(file: UploadFile = File(...)):
-    """
-    Upload and process medical referral documents.
+    """Upload and process medical referral documents."""
+    filename = (file.filename or "").lower()
+    ext = Path(filename).suffix
     
-    Supported formats:
-    - PDF (with OCR)
-    - JPG, JPEG, PNG (with OCR)
-    - TXT (plain text)
-    - DOCX (Microsoft Word)
-    
-    Returns:
-    - job_id: Unique identifier for this processing job
-    - extracted: Structured referral data as JSON
-    - classification: Document classification results
-    - text_stats: Character and word count
-    """
-    filename = (file.filename or "unknown").lower()
-    logger.info(f"📄 Upload received: {file.filename}")
+    logger.info(f"Upload received: {file.filename}")
 
-    # ========== STEP 0: VALIDATE FILE ==========
-    file_ext = Path(filename).suffix.lower()
-    if file_ext not in SUPPORTED_EXTENSIONS:
-        logger.warning(f"❌ Rejected: unsupported extension {file_ext}")
+    # Validate file extension
+    if ext not in SUPPORTED_EXTENSIONS:
+        logger.warning(f"Rejected upload (unsupported extension): {file.filename}")
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file type: {file_ext}. "
-                   f"Supported: {', '.join(sorted(SUPPORTED_EXTENSIONS))}"
+            detail=f"Unsupported file type: {ext}"
         )
 
-    # ========== STEP 1: SAVE FILE ==========
-    job_id, path, file_type = None, None, None
+    # Validate file size
+    file.file.seek(0, 2)  # Seek to end
+    file_size = file.file.tell()
+    file.file.seek(0)  # Reset to beginning
+    
+    if file_size > MAX_FILE_SIZE:
+        logger.warning(f"File too large: {file_size} bytes")
+        raise HTTPException(
+            status_code=400,
+            detail=f"File size exceeds 50MB limit"
+        )
+
+    # ---------- CONTENT EXTRACTION ----------
     try:
-        job_id, path, file_type = save_upload_tmp(file)
-        logger.info(f"💾 Saved file: {path} (job_id={job_id}, type={file_type})")
+        logger.info(f"Extracting content from {ext} file")
+        content_data = extract_with_metadata(file)
+        content_type = content_data.get("type")
+        logger.info(f"Content extraction complete. Type: {content_type}")
     except Exception as e:
-        logger.error(f"❌ Failed to save file: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to save file")
+        logger.error(f"Content extraction failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Content extraction failed: {str(e)}")
 
-    try:
-        # ========== STEP 2: EXTRACT TEXT ==========
-        logger.info(f"📝 Extracting text from {file_type}")
-        try:
-            text_data = extract_text_with_metadata(path)
-            raw_text = text_data.get("raw_text", "").strip()
-            
-            logger.info(
-                f"✓ Text extraction complete: "
-                f"{text_data.get('character_count', 0)} chars, "
-                f"{text_data.get('word_count', 0)} words"
-            )
-            
-            if not raw_text or len(raw_text) < 50:
-                logger.warning(f"❌ Extracted text too short (< 50 chars)")
-                return JSONResponse(
-                    status_code=400,
-                    content={
-                        "job_id": job_id,
-                        "file_type": file_type,
-                        "source_file": file.filename,
-                        "error": "Could not extract sufficient text from document",
-                        "text_stats": text_data
-                    }
-                )
-                
-        except ValueError as e:
-            logger.error(f"❌ Text extraction error: {e}")
-            raise HTTPException(status_code=400, detail=str(e))
-        except Exception as e:
-            logger.error(f"❌ Unexpected text extraction error: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail="Text extraction failed")
-
-        # ========== STEP 3: CLASSIFY DOCUMENT ==========
-        classification = {"is_referral": True, "confidence": 0.5, "score": 0, "details": {}, "reason": "Classification not performed"}
-        try:
-            logger.info(f"🔍 Classifying document")
-            classification = classify_document(raw_text)
-            logger.info(
-                f"✓ Classification: referral={classification.get('is_referral')}, "
-                f"confidence={classification.get('confidence', 0):.2f}"
-            )
-        except Exception as e:
-            logger.warning(f"⚠️  Classification failed: {e} (continuing with extraction)")
-
-        # ========== STEP 4: LLM ANALYSIS ==========
-        raw_extracted = None
-        try:
-            logger.info(f"🤖 Analyzing with LLM")
-            raw_extracted = extract_referral_from_text(raw_text, JSON_SCHEMA)
-            logger.debug(f"✓ LLM raw output: {str(raw_extracted)[:200]}...")
-        except Exception as e:
-            logger.error(f"❌ LLM analysis failed: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail="LLM analysis failed")
-
-        # ========== STEP 5: ENSURE REQUIRED FIELDS & VALIDATE ==========
-        try:
-            # Ensure all required fields exist
-            if not raw_extracted or not isinstance(raw_extracted, dict):
-                raw_extracted = {}
-            
-            raw_extracted = ensure_required_fields(raw_extracted)
-            
-            # Validate with Pydantic
-            validated = ReferralExtraction.parse_obj(raw_extracted)
-            logger.info(f"✓ Validation successful")
-            
-        except Exception as e:
-            logger.error(f"❌ Validation failed: {e}", exc_info=True)
-            logger.debug(f"Raw extracted data: {raw_extracted}")
-            
-            # Return partial result with error
-            return JSONResponse(
-                status_code=200,  # Changed to 200 to allow frontend to display partial data
-                content={
-                    "job_id": job_id,
-                    "file_type": file_type,
-                    "source_file": file.filename,
-                    "classification": classification,
-                    "text_stats": {
-                        "character_count": text_data.get("character_count", 0),
-                        "word_count": text_data.get("word_count", 0)
-                    },
-                    "extracted": raw_extracted,
-                    "validation_warning": f"Data validation had issues: {str(e)}",
-                }
-            )
-
-        # ========== STEP 6: RETURN RESULT ==========
-        result = {
-            "job_id": job_id,
-            "file_type": file_type,
-            "source_file": file.filename,
-            "classification": classification,
-            "text_stats": {
-                "character_count": text_data.get("character_count", 0),
-                "word_count": text_data.get("word_count", 0)
-            },
-            "extracted": validated.dict()
+    # ---------- PROCESS BASED ON CONTENT TYPE ----------
+    if content_type == "images":
+        # Visual formats (PDF, images) -> use Vision API
+        images_base64 = content_data.get("images_base64", [])
+        image_count = content_data.get("image_count", 0)
+        
+        logger.info(f"Processing {image_count} images with Vision API")
+        
+        # No classification for images (Vision API handles everything)
+        classification = {
+            "is_referral": True,
+            "confidence": 1.0,
+            "reason": "vision_processing"
         }
         
-        logger.info(f"✓ Job {job_id} completed successfully")
-        return JSONResponse(content=result, status_code=200)
+        # Extract using Vision API
+        try:
+            logger.info("Analyzing images with GPT-4o Vision")
+            extracted = extract_referral_from_images(images_base64, JSON_SCHEMA)
+            logger.info("Vision extraction complete")
+        except Exception as e:
+            logger.error(f"Vision extraction failed: {e}")
+            raise HTTPException(status_code=500, detail="Vision extraction failed")
+        
+        text_stats = {
+            "image_count": image_count,
+            "character_count": 0,
+            "word_count": 0
+        }
+        
+    elif content_type == "text":
+        # Text formats (TXT, DOCX) -> use text API
+        raw_text = content_data.get("raw_text", "").strip()
+        
+        if not raw_text or len(raw_text) < 50:
+            logger.warning("Extracted text is too short")
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "Insufficient text extracted",
+                    "text_stats": content_data
+                }
+            )
+        
+        # Classification
+        try:
+            logger.info("Classifying document")
+            classification = classify_document(raw_text)
+            logger.info(f"Classification: is_referral={classification['is_referral']}, confidence={classification['confidence']}")
+        except Exception as e:
+            logger.warning(f"Classification error: {e}")
+            classification = {
+                "is_referral": True,
+                "confidence": 0.5,
+                "reason": "classification_failed"
+            }
+        
+        # Extract using text API
+        try:
+            logger.info("Analyzing document with LLM")
+            extracted = extract_referral_from_text(raw_text, JSON_SCHEMA)
+            logger.info("LLM extraction complete")
+        except Exception as e:
+            logger.error(f"LLM extraction failed: {e}")
+            raise HTTPException(status_code=500, detail="LLM extraction failed")
+        
+        text_stats = {
+            "character_count": content_data.get("character_count", 0),
+            "word_count": content_data.get("word_count", 0),
+        }
+    
+    else:
+        raise HTTPException(status_code=500, detail=f"Unknown content type: {content_type}")
 
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.error(f"❌ Job {job_id} failed: {exc}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Processing failed")
-    finally:
-        # Cleanup temp file
-        if path:
-            try:
-                cleanup_path(path)
-                logger.debug(f"🧹 Cleaned up: {path}")
-            except Exception as e:
-                logger.warning(f"⚠️  Cleanup failed: {e}")
+    extracted = ensure_required_fields(extracted)
 
-# ========== SUPPORTED FORMATS ENDPOINT ==========
+    # ---------- VALIDATION ----------
+    try:
+        validated = ReferralExtraction.parse_obj(extracted)
+        logger.info("Validation successful")
+    except Exception as e:
+        logger.warning(f"Validation failed: {e}")
+        return JSONResponse(
+            status_code=200,
+            content={
+                "classification": classification,
+                "text_stats": text_stats,
+                "extracted": extracted,
+                "validation_warning": str(e),
+            }
+        )
+
+    # ---------- SAVE TO BLOB STORAGE ----------
+    extraction_id = blob_service.save_extraction(
+        extracted_data=validated.dict(),
+        filename=file.filename,
+        text_stats=text_stats
+    )
+
+    return {
+        "extraction_id": extraction_id,
+        "classification": classification,
+        "text_stats": text_stats,
+        "extracted": validated.dict()
+    }
+
+
+# ========== INFO ==========
 @app.get("/supported-formats", tags=["info"])
 async def get_supported_formats():
-    """Get list of supported file formats."""
     return {
-        "supported_formats": list(SUPPORTED_EXTENSIONS),
-        "descriptions": {
-            ".pdf": "Portable Document Format (with OCR)",
-            ".jpg": "JPEG Image (with OCR)",
-            ".jpeg": "JPEG Image (with OCR)",
-            ".png": "PNG Image (with OCR)",
-            ".txt": "Plain Text File",
-            ".docx": "Microsoft Word Document"
-        }
+        "supported_formats": list(SUPPORTED_EXTENSIONS)
     }
+
+@app.get("/history", tags=["history"])
+async def get_history(limit: int = 50):
+    """Get extraction history from blob storage."""
+    logger.info(f"Fetching extraction history (limit: {limit})")
+    try:
+        extractions = blob_service.list_extractions(limit=limit)
+        return {
+            "count": len(extractions),
+            "extractions": extractions
+        }
+    except Exception as e:
+        logger.error(f"Failed to fetch history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch history")
+
+@app.get("/extraction/{extraction_id}", tags=["history"])
+async def get_extraction(extraction_id: str):
+    """Get specific extraction by ID."""
+    logger.info(f"Fetching extraction: {extraction_id}")
+    try:
+        result = blob_service.get_extraction(extraction_id)
+        if result:
+            return result
+        else:
+            raise HTTPException(status_code=404, detail="Extraction not found")
+    except Exception as e:
+        logger.error(f"Failed to fetch extraction {extraction_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch extraction")
+
 
 # ========== ERROR HANDLERS ==========
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    """Handle HTTP exceptions."""
-    logger.error(f"HTTP {exc.status_code}: {exc.detail}")
+    logger.error(f"HTTP error: {exc.status_code} - {exc.detail}")
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": exc.detail}
@@ -374,252 +290,29 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    """Handle general exceptions."""
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    logger.exception(f"Unhandled exception: {exc}")
     return JSONResponse(
         status_code=500,
         content={"error": "Internal server error"}
     )
 
-#-----------------------------------DEV--------------------------------------------
+# ========== STATIC FILES (React) ==========
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
-# app/main.py (Updated)
-# import sys
-# import time
-# from pathlib import Path
-# from fastapi import FastAPI, File, UploadFile, HTTPException, Request
-# from fastapi.middleware.cors import CORSMiddleware
-# from fastapi.responses import JSONResponse
-# from .utils import save_upload_tmp, cleanup_path
-# from .text_extractor import extract_text_with_metadata
-# from .gpt_client import extract_referral_from_text
-# from .schemas import ReferralExtraction
-# from .json_schema import JSON_SCHEMA
-# from .classifier import classify_document
-# from app.log import logger
+# The static directory should be where the React build is placed in the Docker container
+# During local development without 'build', this directory may not exist
+static_path = Path(__file__).parent.parent / "static"
 
-# # ensure path for relative imports in worker subprocesses
-# ROOT = Path(__file__).resolve().parents[1]
-# sys.path.insert(0, str(ROOT))
+if static_path.exists():
+    app.mount("/", StaticFiles(directory=str(static_path), html=True), name="static")
 
-# app = FastAPI(title="medical-referral-extractor")
-
-# # Add CORS middleware
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=[
-#         "http://localhost:3000",
-#         "http://127.0.0.1:3000",
-#         "http://localhost","https://zen-ai-referral-fax-extractor.vercel.app"
-#     ],
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
-
-# # Supported file extensions
-# SUPPORTED_EXTENSIONS = {'.pdf', '.jpg', '.jpeg', '.png', '.txt', '.docx'}
-
-
-# # -----------------------
-# # Middleware: request logging
-# # -----------------------
-# @app.middleware("http")
-# async def log_requests(request: Request, call_next):
-#     start = time.time()
-#     try:
-#         logger.info(f"Incoming request {request.method} {request.url.path} from {request.client.host}")
-#     except Exception:
-#         logger.info(f"Incoming request {request.method} {request.url.path}")
-#     try:
-#         response = await call_next(request)
-#     except Exception as exc:
-#         logger.exception(f"Unhandled exception during request {request.method} {request.url.path}: {exc}")
-#         raise
-#     duration = (time.time() - start) * 1000
-#     logger.info(f"Completed {request.method} {request.url.path} -> {response.status_code} in {duration:.1f}ms")
-#     return response
-
-
-# @app.on_event("startup")
-# async def on_startup():
-#     logger.info("Starting medical-referral-extractor application.")
-#     logger.info(f"Supported file types: {', '.join(SUPPORTED_EXTENSIONS)}")
-
-
-# @app.on_event("shutdown")
-# async def on_shutdown():
-#     logger.info("Shutting down medical-referral-extractor application.")
-
-
-# @app.get("/")
-# async def root():
-#     logger.debug("Health check ping received.")
-#     return {
-#         "message": "Medical Referral Extraction Service is running.",
-#         "supported_formats": list(SUPPORTED_EXTENSIONS)
-#     }
-
-
-# @app.post("/upload")
-# async def upload_file(file: UploadFile = File(...)):
-#     """
-#     Upload and process medical referral documents.
-    
-#     Supported formats: PDF, JPG, JPEG, PNG, TXT, DOCX
-    
-#     Returns structured JSON with referral information.
-#     """
-#     filename = (file.filename or "unknown").lower()
-#     logger.info(f"Upload received: {file.filename}")
-
-#     # Validate file extension
-#     file_ext = Path(filename).suffix.lower()
-#     if file_ext not in SUPPORTED_EXTENSIONS:
-#         logger.warning(f"Rejected upload (unsupported extension): {file.filename}")
-#         raise HTTPException(
-#             status_code=400,
-#             detail=f"Unsupported file type: {file_ext}. Supported: {', '.join(SUPPORTED_EXTENSIONS)}"
-#         )
-
-#     # Save uploaded file
-#     job_id, path, file_type = save_upload_tmp(file)
-#     logger.info(f"Saved uploaded file: {path} (job_id={job_id}, type={file_type})")
-
-#     try:
-#         # --------------------------
-#         # STEP 1: EXTRACT TEXT FROM FILE
-#         # --------------------------
-#         logger.info(f"Extracting text from {file_type} file for job {job_id}")
-#         try:
-#             text_data = extract_text_with_metadata(path)
-#             raw_text = text_data["raw_text"]
-            
-#             logger.info(
-#                 f"Text extraction complete for job {job_id}. "
-#                 f"Characters: {text_data['character_count']}, "
-#                 f"Words: {text_data['word_count']}"
-#             )
-            
-#             if not raw_text or len(raw_text.strip()) < 50:
-#                 logger.warning(f"Extracted text is too short for job {job_id}")
-#                 raise HTTPException(
-#                     status_code=400,
-#                     detail="Could not extract sufficient text from the document. Please check if the file is valid."
-#                 )
-                
-#         except ValueError as e:
-#             logger.error(f"Text extraction failed for job {job_id}: {e}")
-#             raise HTTPException(status_code=400, detail=str(e))
-#         except Exception as e:
-#             logger.exception(f"Unexpected error during text extraction for job {job_id}: {e}")
-#             raise HTTPException(status_code=500, detail=f"Text extraction failed: {e}")
-
-#         # --------------------------
-#         # STEP 2: CLASSIFY DOCUMENT
-#         # --------------------------
-#         logger.info(f"Classifying document for job {job_id}")
-#         try:
-#             classification = classify_document(raw_text)
-            
-#             logger.info(
-#                 f"Classification for job {job_id}: "
-#                 f"is_referral={classification['is_referral']}, "
-#                 f"confidence={classification['confidence']}"
-#             )
-            
-#             # If not a referral with low confidence, return early
-#             if not classification['is_referral'] and classification['confidence'] < 0.3:
-#                 logger.warning(f"Document {job_id} classified as NOT a referral")
-                
-#                 # BUG FIX: Return an empty dict for 'extracted' instead of None 
-#                 # to prevent the frontend from failing the check for !editedData.
-#                 return JSONResponse(
-#                     status_code=200,
-#                     content={
-#                         "job_id": job_id,
-#                         "file_type": file_type,
-#                         "source_file": file.filename,
-#                         "classification": classification,
-#                         "message": "Document does not appear to be a medical referral",
-#                         "extracted": {} # Changed from None to {}
-#                     }
-#                 )
-#         except Exception as e:
-#             logger.exception(f"Classification error for job {job_id}: {e}")
-#             # Continue anyway - classification is not critical
-
-#         # --------------------------
-#         # STEP 3: LLM ANALYSIS
-#         # --------------------------
-#         logger.info(f"Analyzing document with LLM for job {job_id}")
-#         try:
-#             raw_extracted = extract_referral_from_text(raw_text, JSON_SCHEMA)
-#             logger.debug(f"LLM raw output for job {job_id}: {str(raw_extracted)[:500]}...")
-#         except Exception as e:
-#             logger.exception(f"LLM processing error for job {job_id}: {e}")
-#             raise HTTPException(status_code=500, detail=f"LLM processing failed: {e}")
-
-#         # --------------------------
-#         # STEP 3: VALIDATE OUTPUT
-#         # --------------------------
-#         try:
-#             validated = ReferralExtraction.parse_obj(raw_extracted)
-#             logger.info(f"Validation successful for job {job_id}")
-#         except Exception as e:
-#             logger.warning(f"Validation failed for job {job_id}: {e}")
-#             logger.debug(f"Raw extracted data: {raw_extracted}")
-#             return JSONResponse(
-#                 status_code=422,
-#                 content={
-#                     "error": "LLM output did not validate against schema",
-#                     "validation_error": str(e),
-#                     "raw_extracted": raw_extracted,
-#                 },
-#             )
-
-#         # --------------------------
-#         # STEP 4: RETURN RESULT
-#         # --------------------------
-#         result = {
-#             "job_id": job_id,
-#             "file_type": file_type,
-#             "source_file": file.filename,
-#             "classification": classification,  # Include classification
-#             "text_stats": {
-#                 "character_count": text_data["character_count"],
-#                 "word_count": text_data["word_count"]
-#             },
-#             "extracted": validated.dict()
-#         }
-        
-#         logger.info(f"Job {job_id} completed successfully")
-#         return JSONResponse(content=result)
-
-#     except HTTPException:
-#         raise
-#     except Exception as exc:
-#         logger.exception(f"Processing failed for job {job_id}: {exc}")
-#         raise HTTPException(status_code=500, detail=f"Processing failed: {exc}")
-#     finally:
-#         try:
-#             cleanup_path(path)
-#             logger.debug(f"Cleaned up temporary file: {path} (job_id={job_id})")
-#         except Exception as e:
-#             logger.exception(f"Failed to cleanup path {path}: {e}")
-
-
-# @app.get("/supported-formats")
-# async def get_supported_formats():
-#     """Get list of supported file formats."""
-#     return {
-#         "supported_formats": list(SUPPORTED_EXTENSIONS),
-#         "descriptions": {
-#             ".pdf": "Portable Document Format (OCR)",
-#             ".jpg": "JPEG Image (OCR)",
-#             ".jpeg": "JPEG Image (OCR)",
-#             ".png": "PNG Image (OCR)",
-#             ".txt": "Plain Text",
-#             ".docx": "Microsoft Word Document"
-#         }
-#     }
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def catch_all(full_path: str):
+        # Serve index.html for all non-API routes to support React Router
+        index_file = static_path / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file)
+        return JSONResponse(status_code=404, content={"error": "Not Found"})
+else:
+    logger.warning(f"Static directory not found at {static_path}. Frontend will not be served by backend.")

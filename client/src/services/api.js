@@ -77,3 +77,18 @@ export const healthCheck = async () => {
   }
 };
 
+/**
+ * Get extraction history from backend
+ * @param {number} limit - Maximum number of extractions to fetch
+ * @returns {Promise} List of extractions
+ */
+export const fetchHistory = async (limit = 50) => {
+  try {
+    const response = await api.get(`/history?limit=${limit}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching history:', error);
+    throw error;
+  }
+};
+

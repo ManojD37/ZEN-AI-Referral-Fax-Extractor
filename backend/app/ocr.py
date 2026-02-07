@@ -3,7 +3,7 @@ import os
 from collections import defaultdict
 from typing import List
 from datetime import datetime
-import logging
+# import logging
 
 from pdf2image import convert_from_path
 from PIL import Image
@@ -40,7 +40,7 @@ def create_run_logger():
 
 # Optional: tesseract cmd from config
 try:
-    from .config import TESSERACT_CMD
+    from config import TESSERACT_CMD
 except Exception:
     TESSERACT_CMD = None
 

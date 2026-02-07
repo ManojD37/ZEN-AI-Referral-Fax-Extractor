@@ -1,93 +1,97 @@
-   # -------------------------
-# PYTHON / FASTAPI BACKEND
-# -------------------------
-
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Virtual environment
-.venv/
+# Virtual Environments
+.env
+.venv
+env/
 venv/
 ENV/
-env/
+env.bak/
+venv.bak/
 
-# Environment variables
-.env
-*.env
-*/.env
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Pyinstaller
-*.spec
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# React / Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+client/node_modules/
+client/build/
+client/.env
+client/npm-debug.log*
+client/yarn-debug.log*
+client/yarn-error.log*
+
+# Docker
+*.dockerignore
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Logs
 *.log
 logs/
+backend/logs/
 
-# SQLite / DB files
-*.db
-*.sqlite3
+# Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
 
-# Cache
-.pytest_cache/
+# Misc
+*.bak
+*.tmp
 .cache/
-.mypy_cache/
-
-# Uploaded files
-uploads/
-media/
-temp/
-
-# VSCode
-.vscode/
-
-# FastAPI build artifacts
-dist/
-build/
-
-# -------------------------
-# NODE / REACT FRONTEND
-# -------------------------
-
-# Node modules
-node_modules/
-
-# Build output
-build/
-dist/
-out/
-
-# Tailwind generated files
-*.css.map
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# dotenv
-.env.local
-.env.development.local
-.env.production.local
-.env.test.local
-
-# MacOS & system files
-.DS_Store
-Thumbs.db
-
-# -------------------------
-# GIT / GENERAL
-# -------------------------
-
-# Ignore local python configs
-*.pkl
-*.pickle
-
-# Editor backups
-*.swp
-*.swo
-
-# Docker intermediate files
-*.pid

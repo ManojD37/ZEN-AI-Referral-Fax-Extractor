@@ -17526,18 +17526,18 @@
                         |-- extensionRequires.js
                         |-- index.js
                         |-- index.js.map
-    |-- app
-        |-- classifier.py
-        |-- config.py
-        |-- gpt_client.py
-        |-- json_schema.py
-        |-- log.py
-        |-- main.py
-        |-- ocr.py
-        |-- schemas.py
-        |-- text_extractor.py
-        |-- utils.py
-        |-- __init__.py
+        |-- app
+            |-- classifier.py
+            |-- config.py
+            |-- gpt_client.py
+            |-- json_schema.py
+            |-- log.py
+            |-- main.py
+            |-- ocr.py
+            |-- schemas.py
+            |-- text_extractor.py
+            |-- utils.py
+            |-- __init__.py
         |-- __pycache__
             |-- classifier.cpython-311.pyc
             |-- config.cpython-311.pyc

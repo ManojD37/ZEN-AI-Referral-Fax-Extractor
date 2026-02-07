@@ -2,13 +2,13 @@
 import json
 import re
 from typing import Any, Dict
-from config import (
+from app.config import (
     AZURE_OPENAI_ENDPOINT,
     AZURE_OPENAI_API_KEY,
     AZURE_OPENAI_DEPLOYMENT,
     AZURE_OPENAI_API_VERSION,
 )
-from .json_schema import JSON_SCHEMA
+from app.json_schema import JSON_SCHEMA
 
 SKIP_MODE = AZURE_OPENAI_API_KEY.lower() == "skip"
 
@@ -63,6 +63,57 @@ else:
             raise RuntimeError(f"Unexpected Azure response: {e}")
         
         return content
+
+    def call_azure_vision(system_prompt: str, images_base64: list, user_text: str = "", max_tokens: int = 2000, temperature: float = 0.0) -> str:
+        """
+        Call Azure OpenAI Vision API with images.
+        
+        Args:
+            system_prompt: System instructions
+            images_base64: List of base64-encoded images
+            user_text: Optional text prompt to accompany images
+            max_tokens: Maximum tokens in response
+            temperature: Sampling temperature
+            
+        Returns:
+            Model response as string
+        """
+        try:
+            # Build content array with images
+            content = []
+            
+            # Add text if provided
+            if user_text:
+                content.append({"type": "text", "text": user_text})
+            
+            # Add all images
+            for img_b64 in images_base64:
+                content.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{img_b64}"
+                    }
+                })
+            
+            resp = client.chat.completions.create(
+                model=AZURE_OPENAI_DEPLOYMENT,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": content},
+                ],
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+        except OpenAIError as e:
+            raise RuntimeError(f"Azure OpenAI Vision request failed: {e}")
+        
+        try:
+            content = resp.choices[0].message.content
+        except Exception as e:
+            raise RuntimeError(f"Unexpected Azure response: {e}")
+        
+        return content
+
 
     def parse_json_output(raw: str) -> Any:
         """Extract and parse JSON from LLM response."""
@@ -141,6 +192,63 @@ Return ONLY the JSON output, no explanations."""
         parsed = parse_json_output(raw_response)
         
         return parsed
+
+    def extract_referral_from_images(images_base64: list, schema: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Extract medical referral information from images using GPT-4o Vision.
+        
+        This function:
+        1. Takes base64-encoded images (PDF pages, scanned documents, photos)
+        2. Uses GPT-4o Vision to read and extract medical referral data
+        3. Returns structured JSON matching the schema
+        
+        Args:
+            images_base64: List of base64-encoded images
+            schema: JSON schema for extraction
+            
+        Returns:
+            Extracted data as dict matching schema
+        """
+        
+        system_prompt = """You are a medical document analysis expert specialized in extracting referral information from scanned documents and images.
+
+Your task is to analyze medical document images and extract structured referral information.
+
+IMPORTANT RULES:
+1. Return ONLY valid JSON matching the provided schema
+2. Extract information ONLY if it's clearly visible in the images
+3. Use null for missing scalar values
+4. Use [] for missing arrays
+5. For document_meta.title: If no clear title, use "Medical Referral Form" or best guess
+6. Focus on REFERRAL-SPECIFIC information (referring doctor to another doctor/facility)
+7. If the document is NOT a medical referral, still extract any relevant medical information present
+8. Handle handwritten text, stamps, signatures, and complex layouts
+9. If multiple pages are provided, combine information from all pages
+
+Medical referral documents typically contain:
+- Referral source (referring facility/doctor)
+- Referral destination (where patient is being referred to)
+- Patient information
+- Reason for referral
+- Diagnoses and treatments
+- Contact information for both facilities
+"""
+
+        user_text = f"""Analyze these medical document images and extract referral information according to the schema below.
+
+SCHEMA:
+{json.dumps(schema, indent=2)}
+
+Return ONLY the JSON output, no explanations."""
+
+        # Call Vision API
+        raw_response = call_azure_vision(system_prompt, images_base64, user_text, max_tokens=2000, temperature=0.0)
+        
+        # Parse JSON
+        parsed = parse_json_output(raw_response)
+        
+        return parsed
+
 
 
 # Keep backward compatibility with old function name

@@ -4,24 +4,22 @@
 // ------------------------------------------------------------------------------------------------------
 
 // src/components/HistoryPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   History, 
   Trash2, 
   Download, 
-  Eye, 
   Calendar, 
   FileText,
   Search,
   AlertCircle,
   Clock,
-  User,
   Building,
   TrendingUp,
   Filter
 } from 'lucide-react';
-import { getHistory, deleteHistoryItem, clearHistory } from '../services/storage';
+import { fetchHistory } from '../services/api';
 
 const HistoryPage = () => {
   const navigate = useNavigate();
@@ -29,22 +27,10 @@ const HistoryPage = () => {
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadHistory();
-  }, []);
-
-  useEffect(() => {
-    filterHistory();
-  }, [searchTerm, history]);
-
-  const loadHistory = () => {
-    const data = getHistory();
-    setHistory(data);
-    setFilteredHistory(data);
-  };
-
-  const filterHistory = () => {
+  const filterHistory = useCallback(() => {
     if (!searchTerm.trim()) {
       setFilteredHistory(history);
       return;
@@ -66,18 +52,42 @@ const HistoryPage = () => {
     });
 
     setFilteredHistory(filtered);
-  };
+  }, [searchTerm, history]);
 
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      deleteHistoryItem(id);
-      loadHistory();
+  const loadHistory = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchHistory();
+      // Backend returns { count: X, extractions: [] }
+      const extractions = data.extractions || [];
+      setHistory(extractions);
+      setFilteredHistory(extractions);
+    } catch (err) {
+      console.error('Failed to load history:', err);
+      setError('Failed to load history from server');
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  useEffect(() => {
+    filterHistory();
+  }, [filterHistory]);
+
+  // NOTE: Delete functionality is disabled until backend delete API is implemented
+  const handleDelete = (id) => {
+    alert('Delete functionality is temporarily disabled. Backend API coming soon.');
+    console.log('Delete requested for:', id);
   };
 
+  // NOTE: Clear all functionality is disabled until backend delete API is implemented
   const handleClearAll = () => {
-    clearHistory();
-    loadHistory();
+    alert('Clear all functionality is temporarily disabled. Backend API coming soon.');
     setShowClearConfirm(false);
   };
 
@@ -230,8 +240,32 @@ const HistoryPage = () => {
           </div>
         )}
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="bg-white p-16 rounded-3xl shadow-xl text-center border border-gray-100">
+            <div className="animate-spin w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-6"></div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Loading History...</h3>
+            <p className="text-gray-600">Fetching your extraction records from the server</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <div className="bg-red-50 p-8 rounded-2xl shadow-lg text-center border border-red-200 mb-8">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-red-700 mb-2">Failed to Load History</h3>
+            <p className="text-red-600 mb-4">{error}</p>
+            <button
+              onClick={loadHistory}
+              className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 font-semibold"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
         {/* History List */}
-        {filteredHistory.length === 0 ? (
+        {!isLoading && !error && filteredHistory.length === 0 ? (
           <div className="bg-white p-16 rounded-3xl shadow-xl text-center border border-gray-100">
             <div className="bg-gradient-to-br from-blue-100 to-cyan-100 w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6">
               <History className="h-12 w-12 text-blue-600" />
@@ -345,15 +379,15 @@ const HistoryPage = () => {
         )}
 
         {/* Note about Storage */}
-        <div className="mt-10 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-2xl p-6 flex items-start space-x-4 shadow-lg">
-          <div className="bg-blue-100 p-2 rounded-lg">
-            <AlertCircle className="h-6 w-6 text-blue-600" />
+        <div className="mt-10 bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-2xl p-6 flex items-start space-x-4 shadow-lg">
+          <div className="bg-green-100 p-2 rounded-lg">
+            <TrendingUp className="h-6 w-6 text-green-600" />
           </div>
           <div>
-            <p className="font-bold text-blue-900 mb-2 text-lg">Local Storage Notice</p>
-            <p className="text-blue-800 leading-relaxed">
-              History is currently stored locally in your browser. 
-              Azure Blob Storage integration is coming soon for persistent cloud storage across all your devices.
+            <p className="font-bold text-green-900 mb-2 text-lg">Cloud Sync Active</p>
+            <p className="text-green-800 leading-relaxed">
+              Your history is now securely stored in Azure Blob Storage. 
+              Extractions are synchronized across all sessions and stored persistently in the cloud.
             </p>
           </div>
         </div>

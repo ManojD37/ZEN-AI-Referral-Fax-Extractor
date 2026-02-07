@@ -1,43 +1,99 @@
 # app/text_extractor.py
 import os
+import base64
+import tempfile
 from typing import List, Dict, Any
 from pathlib import Path
+from io import BytesIO
 from PIL import Image
-import pytesseract
-from pdf2image import convert_from_path
+import fitz  # PyMuPDF
 import docx
+from fastapi import UploadFile
 from app.log import logger
 
-def extract_text_from_pdf(pdf_path: str, dpi: int = 300) -> str:
-    """Extract text from PDF using OCR."""
-    logger.info(f"Extracting text from PDF: {pdf_path}")
+
+def pdf_to_images_base64(pdf_path: str, dpi: int = 150) -> List[str]:
+    """
+    Convert PDF pages to base64-encoded PNG images using PyMuPDF.
+    
+    Args:
+        pdf_path: Path to PDF file
+        dpi: Resolution for rendering (150 is good balance of quality/size)
+        
+    Returns:
+        List of base64-encoded PNG images (one per page)
+    """
+    logger.info(f"Converting PDF to images: {pdf_path}")
+    images_b64 = []
+    
     try:
-        images = convert_from_path(pdf_path, dpi=dpi)
-        all_text = []
+        doc = fitz.open(pdf_path)
+        logger.info(f"PDF has {len(doc)} pages")
         
-        for i, img in enumerate(images, start=1):
-            logger.info(f"Processing page {i}/{len(images)}")
-            text = pytesseract.image_to_string(img)
-            all_text.append(f"--- Page {i} ---\n{text}")
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            
+            # Render page to pixmap (image)
+            # zoom factor: dpi/72 (72 is default DPI)
+            zoom = dpi / 72
+            mat = fitz.Matrix(zoom, zoom)
+            pix = page.get_pixmap(matrix=mat)
+            
+            # Convert to PNG bytes
+            img_bytes = pix.tobytes("png")
+            
+            # Encode to base64
+            img_b64 = base64.b64encode(img_bytes).decode('utf-8')
+            images_b64.append(img_b64)
+            
+            logger.info(f"Rendered page {page_num + 1}/{len(doc)}")
         
-        full_text = "\n\n".join(all_text)
-        logger.info(f"PDF extraction complete. Total characters: {len(full_text)}")
-        return full_text
+        doc.close()
+        logger.info(f"PDF conversion complete. Generated {len(images_b64)} images")
+        return images_b64
+        
     except Exception as e:
-        logger.exception(f"PDF extraction failed: {e}")
+        logger.exception(f"PDF to image conversion failed: {e}")
         raise
 
-def extract_text_from_image(image_path: str) -> str:
-    """Extract text from image using OCR."""
-    logger.info(f"Extracting text from image: {image_path}")
+
+def image_to_base64(image_path: str) -> str:
+    """
+    Convert image file to base64-encoded PNG.
+    
+    Args:
+        image_path: Path to image file
+        
+    Returns:
+        Base64-encoded PNG image
+    """
+    logger.info(f"Converting image to base64: {image_path}")
     try:
         img = Image.open(image_path)
-        text = pytesseract.image_to_string(img)
-        logger.info(f"Image extraction complete. Total characters: {len(text)}")
-        return text
+        
+        # Convert to RGB if needed (for transparency handling)
+        if img.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+            img = background
+        
+        # Save to bytes
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        img_bytes = buffer.getvalue()
+        
+        # Encode to base64
+        img_b64 = base64.b64encode(img_bytes).decode('utf-8')
+        
+        logger.info(f"Image conversion complete")
+        return img_b64
+        
     except Exception as e:
-        logger.exception(f"Image extraction failed: {e}")
+        logger.exception(f"Image to base64 conversion failed: {e}")
         raise
+
 
 def extract_text_from_txt(txt_path: str) -> str:
     """Extract text from TXT file."""
@@ -56,6 +112,7 @@ def extract_text_from_txt(txt_path: str) -> str:
     except Exception as e:
         logger.exception(f"Text file reading failed: {e}")
         raise
+
 
 def extract_text_from_docx(docx_path: str) -> str:
     """Extract text from Word document (.docx)."""
@@ -85,49 +142,106 @@ def extract_text_from_docx(docx_path: str) -> str:
         logger.exception(f"Word document extraction failed: {e}")
         raise
 
-def extract_text_from_file(file_path: str) -> str:
+
+def extract_images_from_file(file_path: str) -> List[str]:
     """
-    Universal text extractor - detects file type and extracts text.
+    Universal image extractor - converts file to base64 images for vision processing.
     
     Supported formats:
-    - PDF: OCR-based extraction
-    - Images (JPG, PNG, JPEG): OCR-based extraction
-    - TXT: Direct text reading
-    - DOCX: Word document text extraction
+    - PDF: Renders each page as image
+    - Images (JPG, PNG, etc.): Converts to base64
+    
+    Args:
+        file_path: Path to file
+        
+    Returns:
+        List of base64-encoded images
     """
     file_path = Path(file_path)
     ext = file_path.suffix.lower()
     
-    logger.info(f"Starting text extraction for: {file_path} (type: {ext})")
+    logger.info(f"Extracting images from: {file_path} (type: {ext})")
     
     if ext == '.pdf':
-        return extract_text_from_pdf(str(file_path))
+        return pdf_to_images_base64(str(file_path))
     elif ext in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']:
-        return extract_text_from_image(str(file_path))
-    elif ext == '.txt':
+        return [image_to_base64(str(file_path))]
+    else:
+        raise ValueError(f"Unsupported file type for image extraction: {ext}")
+
+
+def extract_text_from_file(file_path: str) -> str:
+    """
+    Extract text from TXT or DOCX files (text-only formats).
+    
+    For visual formats (PDF, images), use extract_images_from_file instead.
+    """
+    file_path = Path(file_path)
+    ext = file_path.suffix.lower()
+    
+    logger.info(f"Extracting text from: {file_path} (type: {ext})")
+    
+    if ext == '.txt':
         return extract_text_from_txt(str(file_path))
     elif ext == '.docx':
         return extract_text_from_docx(str(file_path))
     else:
-        raise ValueError(f"Unsupported file type: {ext}")
+        raise ValueError(f"Unsupported file type for text extraction: {ext}")
 
-def extract_text_with_metadata(file_path: str) -> Dict[str, Any]:
+
+def extract_with_metadata(file: UploadFile) -> Dict[str, Any]:
     """
-    Extract text along with metadata.
+    Extract content from uploaded file with metadata.
     
+    Returns either:
+    - {"type": "text", "raw_text": str, ...} for TXT/DOCX
+    - {"type": "images", "images_base64": list, ...} for PDF/images
+    
+    Args:
+        file: FastAPI UploadFile object
+        
     Returns:
-        {
-            "raw_text": str,
-            "file_type": str,
-            "character_count": int,
-            "word_count": int
-        }
+        Dictionary with extraction results and metadata
     """
-    text = extract_text_from_file(file_path)
+    file_ext = Path(file.filename).suffix.lower()
     
-    return {
-        "raw_text": text,
-        "file_type": Path(file_path).suffix.lower(),
-        "character_count": len(text),
-        "word_count": len(text.split())
-    }
+    # Save uploaded file to temp location
+    with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
+        tmp_file.write(file.file.read())
+        tmp_path = tmp_file.name
+    
+    try:
+        # Visual formats (PDF, images) -> extract as images
+        if file_ext in ['.pdf', '.jpg', '.jpeg', '.png', '.bmp', '.tiff']:
+            images = extract_images_from_file(tmp_path)
+            return {
+                "type": "images",
+                "images_base64": images,
+                "file_type": file_ext,
+                "image_count": len(images)
+            }
+        
+        # Text formats (TXT, DOCX) -> extract as text
+        elif file_ext in ['.txt', '.docx']:
+            text = extract_text_from_file(tmp_path)
+            return {
+                "type": "text",
+                "raw_text": text,
+                "file_type": file_ext,
+                "character_count": len(text),
+                "word_count": len(text.split())
+            }
+        
+        else:
+            raise ValueError(f"Unsupported file type: {file_ext}")
+            
+    finally:
+        # Clean up temp file
+        try:
+            os.unlink(tmp_path)
+        except Exception as e:
+            logger.warning(f"Failed to delete temp file {tmp_path}: {e}")
+
+
+# Backward compatibility alias
+extract_text_with_metadata = extract_with_metadata

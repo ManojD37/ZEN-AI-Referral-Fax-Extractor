@@ -66,24 +66,24 @@ class FunctionalStatus(BaseModel):
     precautions: Optional[str] = None
     self_care: Optional[str] = None
     cognitive_impairment: Optional[str] = None
-    assistive_devices_provided: Optional[List[str]] = []
-    assistive_devices_required: Optional[List[str]] = []
+    assistive_devices_provided: Optional[List[str]] = Field(default_factory=list)
+    assistive_devices_required: Optional[List[str]] = Field(default_factory=list)
 
 
 class Diagnoses(BaseModel):
-    primary_diagnoses: Optional[List[str]] = []
-    other_diagnoses: Optional[List[str]] = []
+    primary_diagnoses: Optional[List[str]] = Field(default_factory=list)
+    other_diagnoses: Optional[List[str]] = Field(default_factory=list)
 
 
 class ReferralExtraction(BaseModel):
     document_meta: DocumentMeta
     referral: ReferralInfo
     patient: PatientInfo
-    diagnoses: Optional[Diagnoses] = Diagnoses()
-    treatments: Optional[List[str]] = []
+    diagnoses: Optional[Diagnoses] = Field(default_factory=Diagnoses)
+    treatments: Optional[List[str]] = Field(default_factory=list)
     reason_for_referral: Optional[str] = None
-    transportation_needs: Optional[List[str]] = []
-    follow_up_requirements: Optional[List[str]] = []
+    transportation_needs: Optional[List[str]] = Field(default_factory=list)
+    follow_up_requirements: Optional[List[str]] = Field(default_factory=list)
     functional_status: Optional[FunctionalStatus] = None
     compiled_by: Optional[str] = None
     signature: Optional[str] = None
