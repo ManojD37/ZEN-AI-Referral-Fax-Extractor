@@ -12,9 +12,9 @@ An AI-powered system that extracts structured medical referral data from PDFs, f
 
 ## ⭐ Key Features
 
-- 🧠 **Azure OpenAI GPT-4o-mini** - Advanced language model for precise data extraction
+- 🧠 **Azure OpenAI GPT-4o Vision** - Advanced multimodal model for precise extraction
 - 📄 **Multi-format Support** - PDF, Images (JPG/PNG), TXT, DOCX
-- �️ **OCR Processing** - robust text extraction for scanned documents
+- 👁️ **Visual Analysis** - Processes scanned documents directly without traditional OCR
 - ⚛️ **Modern React UI** - Responsive, user-friendly interface with Tailwind CSS
 - 💾 **History Tracking** - (Coming Soon) Persistent history with Azure Blob Storage
 - ⚡ **High Performance** - FastAPI backend for rapid processing
@@ -28,8 +28,7 @@ An AI-powered system that extracts structured medical referral data from PDFs, f
 
 - **Node.js** v18+ (for frontend)
 - **Python** 3.11+ (for backend)
-- **Tesseract OCR** installed on your system
-- **Azure OpenAI API Key**
+- **Azure OpenAI API Key** (GPT-4o Vision required)
 
 ### 1. Clone the Repository
 

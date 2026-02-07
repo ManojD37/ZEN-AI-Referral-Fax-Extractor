@@ -45,7 +45,7 @@ Render is the recommended free deployment option because it supports **Docker**,
 - **Build Minutes**: 500 free minutes/month.
 
 ## Why not Vercel?
-Vercel is great for React, but our backend uses **FastAPI + Tesseract OCR**.
-- Tesseract requires system-level installation (`apt-get install tesseract-ocr`).
+Vercel is great for React, but our backend uses **FastAPI + System Dependencies**.
+- We use **Poppler** (`poppler-utils`) to convert PDFs to images for GPT-4 Vision.
 - Vercel Serverless functions don't persist system installations easily.
 - Render's Docker runtime allows us to install whatever we want (configured in our `Dockerfile`).

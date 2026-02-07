@@ -13,10 +13,8 @@ RUN npm run build
 FROM python:3.11-slim
 WORKDIR /app
 
-# Install system dependencies (Tesseract OCR + Poppler for PDF processing)
+# Install system dependencies (Poppler for PDF processing)
 RUN apt-get update && apt-get install -y \
-    tesseract-ocr \
-    tesseract-ocr-eng \
     poppler-utils \
     curl \
     && rm -rf /var/lib/apt/lists/*
