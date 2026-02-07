@@ -2,7 +2,14 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# Load environment variables
+# Render secret files are mounted at /etc/secrets/
+render_env_path = Path("/etc/secrets/.env")
+if render_env_path.exists():
+    load_dotenv(render_env_path)
+else:
+    load_dotenv()  # Local .env file
+
 
 # ========== ENVIRONMENT DETECTION ==========
 BASE_DIR = Path(__file__).resolve().parent.parent
