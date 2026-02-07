@@ -45,9 +45,11 @@ SUPPORTED_EXTENSIONS = {'.pdf', '.jpg', '.jpeg', '.png', '.txt', '.docx'}
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
 # ========== HEALTH ==========
-@app.get("/", tags=["health"])
-async def root():
-    logger.info("Health check endpoint called")
+# ========== HEALTH ==========
+@app.get("/api/health", tags=["health"])
+async def api_health():
+    """API health check endpoint."""
+    logger.info("API Health check endpoint called")
     return {
         "status": "healthy",
         "service": "medical-referral-extractor",
