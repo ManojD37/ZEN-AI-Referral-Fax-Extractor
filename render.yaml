@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: medical-referral-extractor
+    name: ZenAI-Fax_Referral_Extractor
     env: docker
     plan: free
     region: oregon # or frankfurt, etc.
