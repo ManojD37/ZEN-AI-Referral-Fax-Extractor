@@ -31,9 +31,9 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://localhost:8501",  # Streamlit default
-        "http://127.0.0.1:8501",
+        "http://localhost:8501",
         "http://localhost",
+        "https://medical-referral-extractor.onrender.com",  # Render deployment
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
@@ -297,19 +297,32 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 # ========== STATIC FILES (React) ==========
+# This must be the LAST route defined to avoid overriding API endpoints
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 # The static directory should be where the React build is placed in the Docker container
-# During local development without 'build', this directory may not exist
-static_path = Path(__file__).parent.parent / "static"
+static_path = Path("/app/static")  # Absolute path inside Docker container
+if not static_path.exists():
+    # Fallback for local development if static folder is inside backend
+    static_path = Path(__file__).parent.parent / "static"
 
 if static_path.exists():
-    app.mount("/", StaticFiles(directory=str(static_path), html=True), name="static")
+    # Mount static assets first (js, css, media)
+    app.mount("/static", StaticFiles(directory=str(static_path / "static"), html=True), name="static_assets")
+    
+    # Serve other build files (manifest.json, favicon.ico, etc.)
+    app.mount("/", StaticFiles(directory=str(static_path), html=True), name="static_root")
 
-    @app.get("/{full_path:path}", include_in_schema=False)
-    async def catch_all(full_path: str):
-        # Serve index.html for all non-API routes to support React Router
+    @app.exception_handler(404)
+    async def custom_404_handler(request: Request, exc: HTTPException):
+        """
+        Fallback for React Router (SPA).
+        If a route is not found in API or static files, serve index.html.
+        """
+        if request.url.path.startswith("/api"):
+            return JSONResponse(status_code=404, content={"error": "API endpoint not found"})
+            
         index_file = static_path / "index.html"
         if index_file.exists():
             return FileResponse(index_file)
