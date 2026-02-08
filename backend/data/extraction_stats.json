@@ -1,0 +1,216 @@
+{
+  "extractions": [
+    {
+      "id": "ed94f625",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T11:14:52.819054"
+    },
+    {
+      "id": "fa74a49f",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T11:14:54.278719"
+    },
+    {
+      "id": "660ab092",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T11:15:09.558676"
+    },
+    {
+      "id": "04c07f3a",
+      "mode": "gpt",
+      "cost": 0.015,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T11:15:23.217156"
+    },
+    {
+      "id": "17e31d8f",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T11:15:23.306675"
+    },
+    {
+      "id": "d7f647db",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.16,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:12:37.447719"
+    },
+    {
+      "id": "86f39ce2",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:12:37.491804"
+    },
+    {
+      "id": "801fa8b9",
+      "mode": "gpt",
+      "cost": 0.015,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:12:49.500649"
+    },
+    {
+      "id": "0290bed1",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:12:49.534919"
+    },
+    {
+      "id": "e7ddfdd8",
+      "mode": "gpt",
+      "cost": 0.015,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:12:55.668339"
+    },
+    {
+      "id": "2f785b0b",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:12:55.700563"
+    },
+    {
+      "id": "ca50753e",
+      "mode": "gpt",
+      "cost": 0.015,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:13:02.070520"
+    },
+    {
+      "id": "c6d04624",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:13:02.102670"
+    },
+    {
+      "id": "c1a6a645",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:13:02.159450"
+    },
+    {
+      "id": "5b7be14d",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:13:02.210949"
+    },
+    {
+      "id": "0d2df8cf",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:24:58.904413"
+    },
+    {
+      "id": "ee7a64c9",
+      "mode": "gpt",
+      "cost": 0.015,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:25:07.100365"
+    },
+    {
+      "id": "e9e0e2db",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:25:07.140786"
+    },
+    {
+      "id": "e49939bf",
+      "mode": "gpt",
+      "cost": 0.015,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:25:13.440969"
+    },
+    {
+      "id": "1c88def4",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:25:13.478336"
+    },
+    {
+      "id": "b4ebbaef",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:25:13.524651"
+    },
+    {
+      "id": "e86d2e32",
+      "mode": "gpt",
+      "cost": 0.015,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:31:38.158897"
+    },
+    {
+      "id": "7654d279",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:31:38.191719"
+    },
+    {
+      "id": "f709abc2",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:31:38.222405"
+    },
+    {
+      "id": "b2d4dd82",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:31:38.273899"
+    },
+    {
+      "id": "df42977a",
+      "mode": "free",
+      "cost": 0.0,
+      "confidence": 0.95,
+      "processing_time": 0,
+      "timestamp": "2026-02-08T14:31:38.312712"
+    }
+  ],
+  "total_gpt": 7,
+  "total_free": 19,
+  "total_cost_gpt": 0.105,
+  "total_cost_free": 0.0
+}

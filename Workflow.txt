@@ -1,147 +1,227 @@
-name: Build and Deploy to Azure Production
+=============================================================================
+        MEDICAL REFERRAL FAX EXTRACTOR - WORKFLOW DOCUMENTATION
+=============================================================================
 
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'backend/**'
-      - 'client/**'
-      - '.github/workflows/deploy-azure-production.yml'
-  workflow_dispatch:
+OVERVIEW
+--------
+This document explains how files are processed and how each code component 
+works in the ZEN-AI Medical Referral Fax Extractor application.
 
-env:
-  REGISTRY: ghcr.io
-  AZURE_REGISTRY: medicalreferralacr
-  BACKEND_IMAGE: medical-referral-backend
-  FRONTEND_IMAGE: medical-referral-frontend
-  RESOURCE_GROUP: medical-referral-rg
-  APP_SERVICE_NAME: aifaxrefferal
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:    
-      contents: read
-      packages: write
-    outputs:
-      backend-image: ${{ steps.image.outputs.backend }}
-      frontend-image: ${{ steps.image.outputs.frontend }}
+=============================================================================
+                          FILE PROCESSING FLOW
+=============================================================================
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+STEP 1: USER UPLOADS FILE
+-------------------------
+Frontend: UploadPage.jsx
 
-      - name: Set image names
-        id: image
-        run: |
-          echo "backend=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}" >> $GITHUB_OUTPUT
-          echo "frontend=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}" >> $GITHUB_OUTPUT
+  User drops/selects file → validation (extension + size) → upload to backend
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  - Allowed extensions: .pdf, .jpg, .jpeg, .png, .txt, .docx
+  - Max file size: 50MB
+  - Progress tracking via axios callbacks
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push backend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: true
-          tags: |
-            ${{ steps.image.outputs.backend }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.BACKEND_IMAGE }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+STEP 2: BACKEND RECEIVES FILE
+-----------------------------
+Backend: main.py → POST /upload endpoint
 
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./client
-          file: ./client/Dockerfile
-          push: true
-          tags: |
-            ${{ steps.image.outputs.frontend }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.FRONTEND_IMAGE }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+  1. Validate file extension
+  2. Validate file size (max 50MB)
+  3. Route to text_extractor.py for content extraction
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main'
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+STEP 3: CONTENT EXTRACTION
+--------------------------
+Backend: text_extractor.py
 
-      - name: Log in to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+  File Type    | Processing Method          | Output
+  -------------|----------------------------|---------------------------
+  PDF          | pdf_to_images_base64()     | List of base64 images
+  JPG/PNG      | image_to_base64()          | Single base64 image
+  TXT          | extract_text_from_txt()    | Raw text string
+  DOCX         | extract_text_from_docx()   | Raw text string
 
-      - name: Deploy backend to App Service
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: ${{ env.APP_SERVICE_NAME }}
-          slot-name: Production
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
-          images: ${{ needs.build.outputs.backend-image }}
+  Visual formats (PDF, images) → converted to base64 for Vision API
+  Text formats (TXT, DOCX) → extracted as raw text for LLM
 
-      - name: Configure App Service environment variables
-        run: |
-          az webapp config appsettings set \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.APP_SERVICE_NAME }} \
-            --settings \
-              ENVIRONMENT=azure \
-              UPLOAD_DIR=/tmp/uploads \
-              MAX_PAGES=8 \
-              LOG_LEVEL=INFO \
-              AZURE_OPENAI_ENDPOINT="${{ secrets.AZURE_OPENAI_ENDPOINT }}" \
-              AZURE_OPENAI_API_KEY="${{ secrets.AZURE_OPENAI_API_KEY }}" \
-              AZURE_OPENAI_DEPLOYMENT="${{ secrets.AZURE_OPENAI_DEPLOYMENT }}" \
-              AZURE_OPENAI_API_VERSION=2024-02-15-preview \
-              AZURE_STORAGE_CONNECTION_STRING="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
-              AZURE_BLOB_CONTAINER=uploads \
-              FRONTEND_URL="${{ secrets.FRONTEND_URL }}" \
-              PYTHONUNBUFFERED=1 \
-              PYTHONDONTWRITEBYTECODE=1
 
-      - name: Restart App Service
-        run: |
-          az webapp restart \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.APP_SERVICE_NAME }}
+STEP 4: AI EXTRACTION
+---------------------
+Backend: gpt_client.py
 
-      - name: Wait for App Service to be healthy
-        run: |
-          echo "Waiting for App Service to become healthy..."
-          for i in {1..30}; do
-            STATUS=$(az webapp show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.APP_SERVICE_NAME }} --query state -o tsv)
-            if [ "$STATUS" == "Running" ]; then
-              echo "✓ App Service is running"
-              break
-            fi
-            echo "⏳ Status: $STATUS (attempt $i/30)"
-            sleep 10
-          done
+  PATH A: Images (PDF, JPG, PNG)
+  - Uses GPT-4o Vision API
+  - All pages/images sent in single request
+  - max_tokens: 2000
+  - temperature: 0.0 (deterministic)
 
-      - name: Test deployed backend
-        run: |
-          ENDPOINT=$(az webapp show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.APP_SERVICE_NAME }} --query defaultHostName -o tsv)
-          echo "Testing health endpoint: https://$ENDPOINT/"
-          curl -f -s https://$ENDPOINT/ || echo "Health check failed"
+  PATH B: Text (TXT, DOCX)
+  - Uses GPT-4o Chat Completion
+  - Text truncated to 8000 chars (cost optimization)
+  - max_tokens: 2000
+  - temperature: 0.0
 
-      - name: Send deployment notification
-        if: always()
-        run: |
-          echo "✅ Deployment completed"
-          echo "App Service: ${{ env.APP_SERVICE_NAME }}"
-          echo "Resource Group: ${{ env.RESOURCE_GROUP }}"
-          echo "Backend Image: ${{ needs.build.outputs.backend-image }}"
+
+STEP 5: CLASSIFICATION (Text Only)
+----------------------------------
+Backend: classifier.py
+
+  For text documents, determines if it's a referral:
+  
+  Keywords Scored:
+  - Strong keywords (referral, referring): 10 points each
+  - Pattern matches: 8 points each
+  - Medical keywords: 2 points each
+  - Admin keywords: 1 point each
+  
+  Classification Result:
+  - is_referral = strong_count >= 1 AND score >= 10
+  - confidence = score / 50 (capped at 1.0)
+
+
+STEP 6: SCHEMA VALIDATION
+-------------------------
+Backend: schemas.py
+
+  Pydantic models validate the extracted data:
+  
+  ReferralExtraction:
+    - document_meta (title, date, pages)
+    - referral (to/from facility, contacts)
+    - patient (name, DOB, gender, phone, address)
+    - diagnoses (primary, other)
+    - treatments
+    - reason_for_referral
+
+
+STEP 7: STORAGE
+---------------
+Backend: blob_storage.py
+
+  Results saved to Azure Blob Storage:
+  - extraction_id: UUID
+  - filename: original filename
+  - timestamp: ISO format
+  - extracted_data: validated extraction
+
+
+STEP 8: RESPONSE TO FRONTEND
+----------------------------
+  {
+    "extraction_id": "uuid...",
+    "classification": {...},
+    "text_stats": {...},
+    "extracted": {...}
+  }
+
+
+STEP 9: DISPLAY RESULTS
+-----------------------
+Frontend: OutputPage.jsx
+
+  - Displays extracted data in categorized cards
+  - Editable fields for manual corrections
+  - Download as JSON button
+  - Classification banner with confidence score
+
+
+=============================================================================
+                           BACKEND MODULES
+=============================================================================
+
+MODULE              | PURPOSE
+--------------------|----------------------------------------------------------
+main.py             | FastAPI routes, CORS config, error handlers
+text_extractor.py   | File → content conversion (PDF to images, DOCX to text)
+gpt_client.py       | Azure OpenAI integration (Vision + Text APIs)
+classifier.py       | Document classification (referral vs non-referral)
+blob_storage.py     | Azure Blob Storage for extraction history
+schemas.py          | Pydantic models for data validation
+config.py           | Environment configuration (API keys, paths)
+log.py              | Logging setup (file + console)
+json_schema.py      | JSON schema for LLM output structure
+
+
+=============================================================================
+                          FRONTEND COMPONENTS
+=============================================================================
+
+COMPONENT           | PURPOSE
+--------------------|----------------------------------------------------------
+App.jsx             | Root router, state management
+HomePage.jsx        | Landing page with features & how-it-works
+UploadPage.jsx      | File upload UI with drag-drop
+OutputPage.jsx      | Results display with editable fields
+HistoryPage.jsx     | Extraction history list with search
+Navbar.jsx          | Navigation bar
+api.js              | Axios API client
+storage.js          | Local storage helpers
+
+
+=============================================================================
+                         COMPLETE FLOW DIAGRAM
+=============================================================================
+
+    User                 Frontend              Backend              Azure
+     |                      |                     |                   |
+     |---Upload File------->|                     |                   |
+     |                      |---POST /upload----->|                   |
+     |                      |                     |                   |
+     |                      |                     |---Convert File--->|
+     |                      |                     |   (PDF→images     |
+     |                      |                     |    or DOCX→text)  |
+     |                      |                     |                   |
+     |                      |                     |---Call OpenAI---->|
+     |                      |                     |   (Vision/Chat)   |
+     |                      |                     |<--JSON response---|
+     |                      |                     |                   |
+     |                      |                     |---Validate------->|
+     |                      |                     |   (Pydantic)      |
+     |                      |                     |                   |
+     |                      |                     |---Save to Blob--->|
+     |                      |                     |<--extraction_id---|
+     |                      |                     |                   |
+     |                      |<----Response--------|                   |
+     |<---Display Results---|                     |                   |
+     |                      |                     |                   |
+     |---Edit/Download----->|                     |                   |
+     |<---referral.json-----|                     |                   |
+
+
+=============================================================================
+                            COST OPTIMIZATION
+=============================================================================
+
+1. Model: gpt-4o-mini (most cost-effective with quality)
+2. Temperature: 0.0 (no randomness = fewer tokens)
+3. max_tokens: 2000 (reasonable limit)
+4. Text truncation: 8000 chars (prevents token overflow)
+5. Single API call per document (batched pages)
+
+
+=============================================================================
+                         PRODUCTION CLEANUP DONE
+=============================================================================
+
+DELETED FILES (4):
+  - backend/checkdns.py (DNS test script)
+  - backend/testai.py (AI test script)
+  - backend/list_deployment.py (HTTP test script)
+  - backend/details (empty file)
+
+CLEANED FILES (8):
+  - backend/app/config.py (removed legacy commented code)
+  - backend/app/utils.py (removed dev commented code)
+  - backend/app/main.py (removed duplicate comment)
+  - backend/app/log.py (changed DEBUG to INFO)
+  - client/src/components/OutputPage.jsx (removed console.logs)
+  - client/src/components/HomePage.jsx (removed separator)
+  - client/src/components/HistoryPage.jsx (removed separator)
+  - client/src/components/UploadPage.jsx (removed separator)
+  - client/src/components/Navbar.jsx (removed separator)
+  - client/src/services/storage.js (removed TODO comments)
+
+
+=============================================================================

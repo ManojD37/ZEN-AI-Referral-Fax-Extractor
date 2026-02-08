@@ -1,40 +1,58 @@
-// src/components/UploadPage.jsx
+// src/components/UploadPage.jsx - Bulk upload with accurate progress tracking
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, FileText, AlertCircle, Loader, CheckCircle, X, Sparkles, Zap } from 'lucide-react';
+import { Upload, FileText, AlertCircle, Loader, CheckCircle, X, Sparkles, Zap, Trash2, List } from 'lucide-react';
 import { uploadFile } from '../services/api';
 import { saveToHistory } from '../services/storage';
 
-const UploadPage = ({ setCurrentResult, setUploadedFile }) => {
+const MAX_FILES = 10;
+
+const UploadPage = ({ setCurrentResult, setUploadedFile, setResults }) => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [processingStatus, setProcessingStatus] = useState(''); // Upload vs Processing
   const [error, setError] = useState(null);
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const [completedFiles, setCompletedFiles] = useState([]);
 
   const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.txt', '.docx'];
 
-  const handleFileSelect = (file) => {
+  const handleFileSelect = (files) => {
     setError(null);
+    const newFiles = [];
     
-    // Validate file type
-    const fileExt = '.' + file.name.split('.').pop().toLowerCase();
-    if (!allowedExtensions.includes(fileExt)) {
-      setError(`Unsupported file type. Allowed: ${allowedExtensions.join(', ')}`);
-      return;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Check max files limit
+      if (selectedFiles.length + newFiles.length >= MAX_FILES) {
+        setError(`Maximum ${MAX_FILES} files allowed`);
+        break;
+      }
+      
+      // Validate file type
+      const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+      if (!allowedExtensions.includes(fileExt)) {
+        setError(`${file.name}: Unsupported file type`);
+        continue;
+      }
+
+      // Validate file size (50MB max)
+      const maxSize = 50 * 1024 * 1024;
+      if (file.size > maxSize) {
+        setError(`${file.name}: File size exceeds 50MB limit`);
+        continue;
+      }
+
+      newFiles.push(file);
     }
 
-    // Validate file size (50MB max)
-    const maxSize = 50 * 1024 * 1024;
-    if (file.size > maxSize) {
-      setError('File size exceeds 50MB limit');
-      return;
-    }
-
-    setSelectedFile(file);
+    setSelectedFiles(prev => [...prev, ...newFiles]);
   };
 
   const handleDrag = (e) => {
@@ -52,55 +70,108 @@ const UploadPage = ({ setCurrentResult, setUploadedFile }) => {
     e.stopPropagation();
     setDragActive(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileSelect(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileSelect(Array.from(e.dataTransfer.files));
     }
   };
 
   const handleFileInputChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFileSelect(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      handleFileSelect(Array.from(e.target.files));
+    }
+  };
+
+  const removeFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setError(null);
+  };
+
+  const clearAllFiles = () => {
+    setSelectedFiles([]);
+    setError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (selectedFiles.length === 0) return;
 
     setUploading(true);
     setError(null);
     setUploadProgress(0);
+    setCompletedFiles([]);
+    setCurrentFileIndex(0);
+
+    const results = [];
+    const totalFiles = selectedFiles.length;
 
     try {
-      const result = await uploadFile(selectedFile, (progress) => {
-        setUploadProgress(progress);
-      });
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        setCurrentFileIndex(i);
+        
+        // Calculate base progress for this file
+        const baseProgress = (i / totalFiles) * 100;
+        const fileProgressRange = 100 / totalFiles;
 
-      // Save to history
-      saveToHistory(result);
+        try {
+          // Phase 1: Uploading (0-50% of file's progress)
+          setProcessingStatus(`Uploading ${file.name}...`);
+          
+          const result = await uploadFile(file, (progress) => {
+            // Map upload progress (0-100) to first half of file's range
+            const uploadPortion = (progress / 100) * (fileProgressRange * 0.5);
+            setUploadProgress(Math.round(baseProgress + uploadPortion));
+          });
 
-      // Set current result and file for OutputPage
-      setCurrentResult(result);
-      setUploadedFile(selectedFile);
+          // Phase 2: Processing complete (remaining 50%)
+          setProcessingStatus(`AI Processing ${file.name}...`);
+          setUploadProgress(Math.round(baseProgress + fileProgressRange));
 
-      // Navigate to output page
-      navigate('/output');
+          // Save to history
+          saveToHistory(result);
+          results.push({ file, result, success: true });
+          setCompletedFiles(prev => [...prev, { name: file.name, success: true }]);
+
+        } catch (fileError) {
+          console.error(`Error processing ${file.name}:`, fileError);
+          results.push({ file, error: fileError, success: false });
+          setCompletedFiles(prev => [...prev, { name: file.name, success: false }]);
+        }
+      }
+
+      setUploadProgress(100);
+      setProcessingStatus('All files processed!');
+
+      // Pass all successful results to App
+      const successfulResults = results.filter(r => r.success);
+      if (successfulResults.length > 0) {
+        // Use new setResults API if available, otherwise fall back to legacy
+        if (setResults) {
+          const allResults = successfulResults.map(r => r.result);
+          const allFiles = successfulResults.map(r => r.file);
+          setResults(allResults, allFiles);
+        } else {
+          // Legacy support - only show last result
+          const lastResult = successfulResults[successfulResults.length - 1];
+          setCurrentResult(lastResult.result);
+          setUploadedFile(lastResult.file);
+        }
+        
+        // Short delay to show completion, then navigate
+        setTimeout(() => {
+          navigate('/output');
+        }, 1500);
+      } else {
+        setError('All files failed to process. Check the console for details.');
+      }
+
     } catch (err) {
       console.error('Upload error:', err);
-      setError(
-        err.response?.data?.detail || 
-        err.message || 
-        'Failed to upload file. Please try again.'
-      );
+      setError(err.response?.data?.detail || err.message || 'Failed to upload file. Please try again.');
     } finally {
       setUploading(false);
-    }
-  };
-
-  const removeSelectedFile = () => {
-    setSelectedFile(null);
-    setError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
     }
   };
 
@@ -134,22 +205,22 @@ const UploadPage = ({ setCurrentResult, setUploadedFile }) => {
           <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-100 to-cyan-100 
                         border-2 border-blue-200 px-5 py-2 rounded-full mb-6">
             <Sparkles className="h-5 w-5 text-blue-600" />
-            <span className="text-sm font-bold text-blue-700">AI-Powered Extraction</span>
+            <span className="text-sm font-bold text-blue-700">AI-Powered Extraction • Bulk Upload</span>
           </div>
           <h1 className="text-5xl font-extrabold text-gray-800 mb-4 leading-tight">
             Upload Medical<br />
             <span className="bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
-              Referral Document
+              Referral Documents
             </span>
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Upload a PDF, image, text file, or Word document to extract referral information using advanced AI technology
+            Upload up to <strong>{MAX_FILES} files</strong> at once for batch AI extraction
           </p>
         </div>
 
         {/* Upload Area */}
         <div className="bg-white rounded-3xl shadow-2xl p-10 mb-10 border border-gray-100">
-          {!selectedFile ? (
+          {selectedFiles.length === 0 ? (
             <div
               className={`
                 border-4 border-dashed rounded-2xl p-16 text-center transition-all duration-300
@@ -165,14 +236,6 @@ const UploadPage = ({ setCurrentResult, setUploadedFile }) => {
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
             >
-              {/* Animated background */}
-              <div className="absolute inset-0 opacity-5">
-                <div className="absolute inset-0" style={{
-                  backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)',
-                  backgroundSize: '32px 32px'
-                }}></div>
-              </div>
-
               <div className="relative">
                 <div className="relative inline-block mb-8">
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full blur-2xl opacity-30 animate-pulse"></div>
@@ -182,10 +245,10 @@ const UploadPage = ({ setCurrentResult, setUploadedFile }) => {
                 </div>
                 
                 <h3 className="text-3xl font-bold text-gray-800 mb-3">
-                  Drop your file here
+                  Drop your files here
                 </h3>
                 <p className="text-lg text-gray-600 mb-8">
-                  or click anywhere to browse your files
+                  or click anywhere to browse • up to {MAX_FILES} files
                 </p>
                 
                 <input
@@ -194,6 +257,7 @@ const UploadPage = ({ setCurrentResult, setUploadedFile }) => {
                   accept=".pdf,.jpg,.jpeg,.png,.txt,.docx,.doc"
                   onChange={handleFileInputChange}
                   className="hidden"
+                  multiple
                 />
                 
                 <button
@@ -207,10 +271,9 @@ const UploadPage = ({ setCurrentResult, setUploadedFile }) => {
                            transform hover:scale-105 transition-all duration-200
                            shadow-2xl hover:shadow-3xl relative overflow-hidden group"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 group-hover:opacity-20 transition-opacity"></div>
-                  <Upload className="h-6 w-6 relative z-10" />
-                  <span className="relative z-10">Select File to Upload</span>
-                  <Zap className="h-5 w-5 relative z-10" />
+                  <Upload className="h-6 w-6" />
+                  <span>Select Files to Upload</span>
+                  <Zap className="h-5 w-5" />
                 </button>
                 
                 <div className="mt-10 pt-8 border-t-2 border-gray-200">
@@ -222,60 +285,119 @@ const UploadPage = ({ setCurrentResult, setUploadedFile }) => {
                     <div className="w-px h-6 bg-gray-300"></div>
                     <div className="flex items-center space-x-2">
                       <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span className="font-semibold">Max 50MB</span>
+                      <span className="font-semibold">Max 50MB each</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="space-y-8">
-              {/* Selected File Display */}
-              <div className="flex items-center justify-between p-8 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 
-                            rounded-2xl border-3 border-blue-200 shadow-lg">
-                <div className="flex items-center space-x-6">
-                  <div className="text-6xl animate-bounce">{getFileIcon(selectedFile.name)}</div>
-                  <div>
-                    <p className="font-bold text-gray-800 text-xl mb-1">{selectedFile.name}</p>
-                    <p className="text-gray-600 font-semibold">
-                      {formatFileSize(selectedFile.size)}
-                    </p>
-                  </div>
+            <div className="space-y-6">
+              {/* File List Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <List className="h-6 w-6 text-blue-600" />
+                  <h3 className="text-xl font-bold text-gray-800">
+                    {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
+                  </h3>
                 </div>
-                <button
-                  onClick={removeSelectedFile}
-                  disabled={uploading}
-                  className="p-4 text-gray-500 hover:text-red-600 hover:bg-red-100 
-                           rounded-xl transition-all duration-200 disabled:opacity-50 hover:scale-110"
-                >
-                  <X className="h-7 w-7" />
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading || selectedFiles.length >= MAX_FILES}
+                    className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg font-medium text-sm disabled:opacity-50"
+                  >
+                    + Add More
+                  </button>
+                  <button
+                    onClick={clearAllFiles}
+                    disabled={uploading}
+                    className="flex items-center space-x-1 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium text-sm disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Clear All</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Upload Progress */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.txt,.docx,.doc"
+                onChange={handleFileInputChange}
+                className="hidden"
+                multiple
+              />
+
+              {/* File List */}
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {selectedFiles.map((file, index) => {
+                  const completed = completedFiles.find(f => f.name === file.name);
+                  const isCurrentFile = uploading && index === currentFileIndex;
+                  
+                  return (
+                    <div 
+                      key={`${file.name}-${index}`}
+                      className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all
+                        ${isCurrentFile ? 'bg-blue-50 border-blue-300' : 
+                          completed?.success ? 'bg-green-50 border-green-200' : 
+                          completed?.success === false ? 'bg-red-50 border-red-200' : 
+                          'bg-gray-50 border-gray-200'}`}
+                    >
+                      <div className="flex items-center space-x-4">
+                        <div className="text-3xl">{getFileIcon(file.name)}</div>
+                        <div>
+                          <p className="font-semibold text-gray-800">{file.name}</p>
+                          <p className="text-sm text-gray-500">{formatFileSize(file.size)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        {isCurrentFile && (
+                          <Loader className="h-5 w-5 animate-spin text-blue-600" />
+                        )}
+                        {completed?.success && (
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        )}
+                        {completed?.success === false && (
+                          <AlertCircle className="h-5 w-5 text-red-600" />
+                        )}
+                        {!uploading && (
+                          <button
+                            onClick={() => removeFile(index)}
+                            className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                          >
+                            <X className="h-4 w-4 text-gray-500" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Progress Display */}
               {uploading && (
-                <div className="space-y-4 p-8 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border-2 border-blue-200 shadow-lg">
+                <div className="space-y-4 p-6 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl border-2 border-blue-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <Loader className="h-6 w-6 animate-spin text-blue-600" />
                       <span className="text-gray-800 font-bold text-lg">
-                        {uploadProgress < 100 ? 'Uploading Document...' : 'Processing with AI...'}
+                        {processingStatus}
                       </span>
                     </div>
                     <span className="text-blue-600 font-bold text-2xl">{uploadProgress}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
+                  <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 h-4 rounded-full 
-                               transition-all duration-500 ease-out relative overflow-hidden"
+                               transition-all duration-300 ease-out relative overflow-hidden"
                       style={{ width: `${uploadProgress}%` }}
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-center space-x-2 text-gray-600 pt-2">
-                    <Sparkles className="h-5 w-5 text-yellow-500 animate-pulse" />
-                    <span className="font-medium">AI is analyzing your document...</span>
+                  <div className="text-center text-sm text-gray-600">
+                    Processing file {currentFileIndex + 1} of {selectedFiles.length}
                   </div>
                 </div>
               )}
@@ -287,25 +409,22 @@ const UploadPage = ({ setCurrentResult, setUploadedFile }) => {
                 className={`
                   w-full py-6 rounded-2xl font-bold text-white text-xl
                   flex items-center justify-center space-x-4
-                  transition-all duration-300 transform relative overflow-hidden
+                  transition-all duration-300 transform
                   ${uploading 
                     ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-gradient-to-r from-green-600 via-green-700 to-emerald-700 hover:from-green-700 hover:via-green-800 hover:to-emerald-800 hover:scale-[1.02] shadow-2xl hover:shadow-3xl'
+                    : 'bg-gradient-to-r from-green-600 via-green-700 to-emerald-700 hover:from-green-700 hover:via-green-800 hover:to-emerald-800 hover:scale-[1.02] shadow-2xl'
                   }
                 `}
               >
-                {!uploading && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-400 opacity-0 hover:opacity-20 transition-opacity"></div>
-                )}
                 {uploading ? (
                   <>
                     <Loader className="h-7 w-7 animate-spin" />
-                    <span>Processing...</span>
+                    <span>Processing {currentFileIndex + 1} of {selectedFiles.length}...</span>
                   </>
                 ) : (
                   <>
                     <CheckCircle className="h-7 w-7" />
-                    <span>Upload & Extract Data</span>
+                    <span>Upload & Extract {selectedFiles.length} File{selectedFiles.length !== 1 ? 's' : ''}</span>
                     <Zap className="h-6 w-6" />
                   </>
                 )}
@@ -315,12 +434,12 @@ const UploadPage = ({ setCurrentResult, setUploadedFile }) => {
 
           {/* Error Display */}
           {error && (
-            <div className="mt-8 p-6 bg-gradient-to-r from-red-50 to-pink-50 border-3 border-red-200 rounded-2xl flex items-start space-x-4 shadow-lg">
+            <div className="mt-8 p-6 bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-200 rounded-2xl flex items-start space-x-4">
               <div className="bg-red-100 p-2 rounded-lg">
                 <AlertCircle className="h-7 w-7 text-red-600" />
               </div>
               <div>
-                <p className="font-bold text-red-800 text-xl mb-1">Upload Failed</p>
+                <p className="font-bold text-red-800 text-xl mb-1">Error</p>
                 <p className="text-red-700 text-lg">{error}</p>
               </div>
             </div>
@@ -343,9 +462,9 @@ const UploadPage = ({ setCurrentResult, setUploadedFile }) => {
             <div className="bg-gradient-to-br from-green-500 to-green-600 w-16 h-16 rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-lg">
               <CheckCircle className="h-8 w-8 text-white" />
             </div>
-            <h3 className="font-bold text-gray-800 mb-3 text-xl">AI-Powered Accuracy</h3>
+            <h3 className="font-bold text-gray-800 mb-3 text-xl">Batch Processing</h3>
             <p className="text-gray-600 leading-relaxed">
-              Advanced AI extraction with exceptional accuracy and reliability
+              Upload up to {MAX_FILES} files at once with accurate progress tracking
             </p>
           </div>
           
@@ -360,7 +479,7 @@ const UploadPage = ({ setCurrentResult, setUploadedFile }) => {
           </div>
         </div>
 
-        {/* Add shimmer animation keyframes */}
+        {/* Shimmer animation */}
         <style>{`
           @keyframes shimmer {
             0% { transform: translateX(-100%); }
@@ -376,6 +495,3 @@ const UploadPage = ({ setCurrentResult, setUploadedFile }) => {
 };
 
 export default UploadPage;
-
-//-----------------------------------------------------------------------------------------------------------------------------
-

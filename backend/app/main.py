@@ -2,7 +2,9 @@
 import sys
 import time
 from pathlib import Path
-from fastapi import FastAPI, File, UploadFile, HTTPException, Request
+from typing import Optional
+from pydantic import BaseModel
+from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -13,6 +15,26 @@ from app.json_schema import JSON_SCHEMA
 from app.classifier import classify_document
 from app.log import logger
 from app.blob_storage import blob_service
+from app.auth import verify_password, create_session, verify_session, invalidate_session, require_admin, get_admin_token
+from app.cost_tracker import (
+    get_extraction_mode, set_extraction_mode, get_settings, update_settings,
+    record_extraction, get_cost_analytics
+)
+
+
+# Pydantic models for auth endpoints
+class LoginRequest(BaseModel):
+    password: str
+
+class LoginResponse(BaseModel):
+    success: bool
+    token: Optional[str] = None
+    message: str
+
+class SettingsRequest(BaseModel):
+    extraction_mode: Optional[str] = None
+    auto_fallback: Optional[bool] = None
+    confidence_threshold: Optional[float] = None
 
 # Ensure path for relative imports
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,7 +67,6 @@ SUPPORTED_EXTENSIONS = {'.pdf', '.jpg', '.jpeg', '.png', '.txt', '.docx'}
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
 # ========== HEALTH ==========
-# ========== HEALTH ==========
 @app.get("/api/health", tags=["health"])
 async def api_health():
     """API health check endpoint."""
@@ -62,6 +83,84 @@ async def health_check():
     return {
         "status": "ok",
         "timestamp": time.time()
+    }
+
+
+# ========== AUTH ENDPOINTS ==========
+@app.post("/api/auth/login", tags=["auth"], response_model=LoginResponse)
+async def admin_login(request: LoginRequest):
+    """Admin login endpoint."""
+    if verify_password(request.password):
+        token = create_session()
+        logger.info("Admin login successful")
+        return LoginResponse(success=True, token=token, message="Login successful")
+    else:
+        logger.warning("Admin login failed - invalid password")
+        return LoginResponse(success=False, message="Invalid password")
+
+
+@app.post("/api/auth/logout", tags=["auth"])
+async def admin_logout(token: Optional[str] = Depends(get_admin_token)):
+    """Admin logout endpoint."""
+    if token:
+        invalidate_session(token)
+    return {"success": True, "message": "Logged out"}
+
+
+@app.get("/api/auth/verify", tags=["auth"])
+async def verify_auth(token: Optional[str] = Depends(get_admin_token)):
+    """Verify if current session is valid."""
+    is_valid = token and verify_session(token)
+    return {"authenticated": is_valid}
+
+
+# ========== ADMIN SETTINGS ENDPOINTS ==========
+@app.get("/api/settings", tags=["admin"])
+async def get_admin_settings(is_admin: bool = Depends(require_admin)):
+    """Get current admin settings (protected)."""
+    settings = get_settings()
+    return {
+        "success": True,
+        "settings": settings
+    }
+
+
+@app.post("/api/settings", tags=["admin"])
+async def update_admin_settings(
+    request: SettingsRequest,
+    is_admin: bool = Depends(require_admin)
+):
+    """Update admin settings (protected)."""
+    settings_dict = request.model_dump(exclude_none=True)
+    updated = update_settings(settings_dict)
+    logger.info(f"Admin settings updated: {settings_dict}")
+    return {
+        "success": True,
+        "settings": updated
+    }
+
+
+# ========== COST ANALYTICS ENDPOINT ==========
+@app.get("/api/stats/cost", tags=["admin"])
+async def get_cost_stats(
+    days: int = 30,
+    is_admin: bool = Depends(require_admin)
+):
+    """Get cost analytics for the specified period (protected)."""
+    analytics = get_cost_analytics(days)
+    return {
+        "success": True,
+        "analytics": analytics
+    }
+
+
+# ========== PUBLIC EXTRACTION MODE ==========
+@app.get("/api/extraction-mode", tags=["settings"])
+async def get_current_extraction_mode():
+    """Get current extraction mode (public - for upload page display)."""
+    return {
+        "mode": get_extraction_mode(),
+        "modes_available": ["gpt", "free"]
     }
 
 
@@ -103,10 +202,13 @@ def ensure_required_fields(data: dict) -> dict:
 @app.post("/upload", tags=["upload"])
 async def upload_file(file: UploadFile = File(...)):
     """Upload and process medical referral documents."""
+    import uuid
+    job_id = str(uuid.uuid4())[:8]  # Short unique ID for tracking
+    
     filename = (file.filename or "").lower()
     ext = Path(filename).suffix
     
-    logger.info(f"Upload received: {file.filename}")
+    logger.info(f"Upload received: {file.filename} (job_id: {job_id})")
 
     # Validate file extension
     if ext not in SUPPORTED_EXTENSIONS:
@@ -139,33 +241,80 @@ async def upload_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=f"Content extraction failed: {str(e)}")
 
     # ---------- PROCESS BASED ON CONTENT TYPE ----------
+    # Get current extraction mode
+    current_mode = get_extraction_mode()
+    logger.info(f"Current extraction mode: {current_mode}")
+    
     if content_type == "images":
-        # Visual formats (PDF, images) -> use Vision API
+        # Visual formats (PDF, images)
         images_base64 = content_data.get("images_base64", [])
         image_count = content_data.get("image_count", 0)
         
-        logger.info(f"Processing {image_count} images with Vision API")
+        logger.info(f"Processing {image_count} images")
+        
+        extracted = None
+        extraction_confidence = 1.0
+        
+        # Try free OCR if mode is set to "free"
+        if current_mode == "free":
+            try:
+                from app.ocr_free import ocr_extract, is_tesseract_available
+                from app.ner_extractor import extract_structured_data
+                
+                if is_tesseract_available():
+                    logger.info("Using FREE OCR mode (Tesseract + spaCy)")
+                    
+                    # Get file bytes from temp file
+                    file.file.seek(0)
+                    file_bytes = file.file.read()
+                    file.file.seek(0)
+                    
+                    # OCR extraction
+                    ocr_result = ocr_extract(file_bytes, ext.lstrip('.'))
+                    
+                    if ocr_result.get("success") and ocr_result.get("raw_text"):
+                        raw_text = ocr_result["raw_text"]
+                        extraction_confidence = ocr_result.get("confidence", 0.7)
+                        
+                        # NER extraction
+                        extracted = extract_structured_data(raw_text)
+                        logger.info(f"Free OCR extraction complete. Confidence: {extraction_confidence}")
+                        
+                        # Record cost (free)
+                        record_extraction("free", job_id, extraction_confidence)
+                    else:
+                        logger.warning(f"Free OCR failed: {ocr_result.get('error')}")
+                else:
+                    logger.warning("Tesseract not available, falling back to GPT")
+            except Exception as e:
+                logger.warning(f"Free OCR error, falling back to GPT: {e}")
+        
+        # Fallback to GPT Vision if free OCR didn't work or mode is GPT
+        if extracted is None:
+            logger.info("Using GPT-4 Vision API")
+            try:
+                extracted = extract_referral_from_images(images_base64, JSON_SCHEMA)
+                extraction_confidence = 0.95
+                logger.info("Vision extraction complete")
+                
+                # Record cost (GPT)
+                record_extraction("gpt", job_id, extraction_confidence)
+            except Exception as e:
+                logger.error(f"Vision extraction failed: {e}")
+                raise HTTPException(status_code=500, detail="Vision extraction failed")
         
         # No classification for images (Vision API handles everything)
         classification = {
             "is_referral": True,
-            "confidence": 1.0,
-            "reason": "vision_processing"
+            "confidence": extraction_confidence,
+            "reason": f"{current_mode}_processing"
         }
-        
-        # Extract using Vision API
-        try:
-            logger.info("Analyzing images with GPT-4o Vision")
-            extracted = extract_referral_from_images(images_base64, JSON_SCHEMA)
-            logger.info("Vision extraction complete")
-        except Exception as e:
-            logger.error(f"Vision extraction failed: {e}")
-            raise HTTPException(status_code=500, detail="Vision extraction failed")
         
         text_stats = {
             "image_count": image_count,
             "character_count": 0,
-            "word_count": 0
+            "word_count": 0,
+            "extraction_mode": current_mode
         }
         
     elif content_type == "text":
@@ -195,18 +344,34 @@ async def upload_file(file: UploadFile = File(...)):
                 "reason": "classification_failed"
             }
         
-        # Extract using text API
-        try:
-            logger.info("Analyzing document with LLM")
-            extracted = extract_referral_from_text(raw_text, JSON_SCHEMA)
-            logger.info("LLM extraction complete")
-        except Exception as e:
-            logger.error(f"LLM extraction failed: {e}")
-            raise HTTPException(status_code=500, detail="LLM extraction failed")
+        # Extract based on mode
+        extracted = None
+        
+        if current_mode == "free":
+            try:
+                from app.ner_extractor import extract_structured_data
+                logger.info("Using FREE NER extraction (spaCy)")
+                extracted = extract_structured_data(raw_text)
+                record_extraction("free", job_id, classification.get("confidence", 0.7))
+                logger.info("Free NER extraction complete")
+            except Exception as e:
+                logger.warning(f"Free NER extraction failed, falling back to GPT: {e}")
+        
+        # Fallback to GPT
+        if extracted is None:
+            try:
+                logger.info("Analyzing document with LLM")
+                extracted = extract_referral_from_text(raw_text, JSON_SCHEMA)
+                record_extraction("gpt", job_id, 0.95)
+                logger.info("LLM extraction complete")
+            except Exception as e:
+                logger.error(f"LLM extraction failed: {e}")
+                raise HTTPException(status_code=500, detail="LLM extraction failed")
         
         text_stats = {
             "character_count": content_data.get("character_count", 0),
             "word_count": content_data.get("word_count", 0),
+            "extraction_mode": current_mode
         }
     
     else:
@@ -238,7 +403,10 @@ async def upload_file(file: UploadFile = File(...)):
     )
 
     return {
+        "job_id": extraction_id,
         "extraction_id": extraction_id,
+        "file_type": ext.lstrip('.').upper(),
+        "filename": file.filename,
         "classification": classification,
         "text_stats": text_stats,
         "extracted": validated.dict()

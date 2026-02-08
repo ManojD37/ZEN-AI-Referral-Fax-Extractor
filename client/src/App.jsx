@@ -6,11 +6,25 @@ import HomePage from './components/HomePage';
 import UploadPage from './components/UploadPage';
 import OutputPage from './components/OutputPage';
 import HistoryPage from './components/HistoryPage';
+import AdminSettings from './components/AdminSettings';
 import './App.css';
 
 function App() {
-  const [currentResult, setCurrentResult] = useState(null);
-  const [uploadedFile, setUploadedFile] = useState(null);
+  // Support multiple results for bulk upload
+  const [allResults, setAllResults] = useState([]);
+  const [currentResultIndex, setCurrentResultIndex] = useState(0);
+  const [allUploadedFiles, setAllUploadedFiles] = useState([]);
+
+  // Get current result and file
+  const currentResult = allResults[currentResultIndex] || null;
+  const uploadedFile = allUploadedFiles[currentResultIndex] || null;
+
+  // Handlers for setting results
+  const handleSetResults = (results, files) => {
+    setAllResults(results);
+    setAllUploadedFiles(files);
+    setCurrentResultIndex(0);
+  };
 
   return (
     <Router>
@@ -22,8 +36,10 @@ function App() {
             path="/upload" 
             element={
               <UploadPage 
-                setCurrentResult={setCurrentResult}
-                setUploadedFile={setUploadedFile}
+                setResults={handleSetResults}
+                // Legacy support
+                setCurrentResult={(r) => handleSetResults([r], [])}
+                setUploadedFile={() => {}}
               />
             } 
           />
@@ -33,10 +49,14 @@ function App() {
               <OutputPage 
                 result={currentResult}
                 uploadedFile={uploadedFile}
+                allResults={allResults}
+                currentIndex={currentResultIndex}
+                setCurrentIndex={setCurrentResultIndex}
               />
             } 
           />
           <Route path="/history" element={<HistoryPage />} />
+          <Route path="/admin" element={<AdminSettings />} />
         </Routes>
       </div>
     </Router>

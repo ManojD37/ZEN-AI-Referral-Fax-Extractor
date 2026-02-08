@@ -1,10 +1,28 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, Upload, History, FileText, Activity, FilePlus } from "lucide-react";
+import { Home, Upload, History, FileText, Activity, FilePlus, Settings } from "lucide-react";
 
 const Navbar = () => {
   const location = useLocation();
   const isActive = (path) => location.pathname === path;
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Check if admin token exists
+  useEffect(() => {
+    const checkAdmin = () => {
+      const token = localStorage.getItem('adminToken');
+      setIsAdmin(!!token);
+    };
+    checkAdmin();
+    // Listen for storage changes
+    window.addEventListener('storage', checkAdmin);
+    // Check periodically (for same-tab updates)
+    const interval = setInterval(checkAdmin, 1000);
+    return () => {
+      window.removeEventListener('storage', checkAdmin);
+      clearInterval(interval);
+    };
+  }, []);
 
   // Navbar ALWAYS white now
   const navbarClasses = "bg-white shadow-lg";
@@ -71,8 +89,28 @@ const Navbar = () => {
               <span>Extract</span>
             </Link>
 
+            {/* Admin Settings Link - Only visible to admins */}
+            <Link
+              to="/admin"
+              className={`
+                relative flex items-center space-x-2 px-4 py-2.5 rounded-lg
+                text-sm font-semibold tracking-wide transition-all duration-300
+                ${
+                  isActive('/admin')
+                    ? "text-white bg-purple-600 shadow-md"
+                    : isAdmin
+                      ? "text-purple-600 bg-purple-50 border border-purple-200 hover:bg-purple-100"
+                      : "text-gray-500 hover:bg-gray-100"
+                }
+              `}
+              title={isAdmin ? "Admin Settings" : "Login as Admin"}
+            >
+              <Settings className="h-4 w-4" />
+              {isAdmin && <span>Admin</span>}
+            </Link>
+
             {/* Status Indicator */}
-            <div className="ml-4 pl-4 border-l border-gray-300">
+            <div className="ml-2 pl-4 border-l border-gray-300">
               <div className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 border border-gray-200">
                 <Activity className="h-4 w-4 text-green-500 animate-pulse" />
                 <span className="text-xs font-medium text-gray-700">Online</span>
@@ -90,5 +128,3 @@ const Navbar = () => {
 
 export default Navbar;
 
-
-// ----------------------------------------------------------------------------------------------------------------

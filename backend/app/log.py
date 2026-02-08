@@ -18,7 +18,7 @@ log_filename = LOG_DIR / f"app_{datetime.now().strftime('%Y-%m-%d')}.log"
 # Logger configuration
 # -------------------------
 logger = logging.getLogger("FaxRefBackend")
-logger.setLevel(logging.DEBUG)   # Change to INFO in production
+logger.setLevel(logging.INFO)  # Production-ready log level
 
 formatter = logging.Formatter(
     "%(asctime)s | %(levelname)s | %(name)s | %(message)s",

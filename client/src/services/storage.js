@@ -84,15 +84,3 @@ export const clearHistory = () => {
     throw error;
   }
 };
-
-// TODO: Azure Blob Storage integration
-// When ready, replace these functions with Azure Blob Storage API calls
-// Example structure:
-/*
-export const saveToAzureBlob = async (result) => {
-  const { BlobServiceClient } = require('@azure/storage-blob');
-  const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
-  const containerClient = blobServiceClient.getContainerClient(containerName);
-  // ... Azure Blob implementation
-};
-*/
