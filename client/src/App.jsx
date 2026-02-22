@@ -1,4 +1,5 @@
 // src/App.jsx
+// Main application component — sets up routing, manages global state.
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -37,7 +38,6 @@ function App() {
             element={
               <UploadPage 
                 setResults={handleSetResults}
-                // Legacy support
                 setCurrentResult={(r) => handleSetResults([r], [])}
                 setUploadedFile={() => {}}
               />
@@ -50,6 +50,7 @@ function App() {
                 result={currentResult}
                 uploadedFile={uploadedFile}
                 allResults={allResults}
+                allUploadedFiles={allUploadedFiles}
                 currentIndex={currentResultIndex}
                 setCurrentIndex={setCurrentResultIndex}
               />
@@ -64,4 +65,3 @@ function App() {
 }
 
 export default App;
-

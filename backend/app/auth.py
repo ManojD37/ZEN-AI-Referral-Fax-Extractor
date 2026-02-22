@@ -18,7 +18,7 @@ from app.log import logger
 _sessions: Dict[str, dict] = {}
 
 # Configuration
-SESSION_EXPIRY_SECONDS = 30 * 24 * 60 * 60  # 30 days
+SESSION_EXPIRY_SECONDS = 24 * 60 * 60  # 24 hours (more secure than 30 days)
 ADMIN_PASSWORD_ENV = "ADMIN_PASSWORD"
 DEFAULT_ADMIN_PASSWORD = "QtOwbFqlrQJoXcP701iwfdz8Vx77UZTOVOeHmRV"  # Change in production!
 

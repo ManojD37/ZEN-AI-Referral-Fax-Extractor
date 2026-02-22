@@ -214,9 +214,14 @@ class ReferralClassifier:
                 return f"Non-referral: Score {score} below classification threshold ({self.threshold_score})"
 
 
+# Module-level singleton — avoids re-creating the classifier on every API call
+_classifier_instance = ReferralClassifier()
+
+
 def classify_document(text: str) -> Dict:
     """
     Convenience function to classify a document.
+    Uses a module-level singleton to avoid repeated initialization.
     
     Args:
         text: Extracted text from document
@@ -224,5 +229,4 @@ def classify_document(text: str) -> Dict:
     Returns:
         Classification result dictionary
     """
-    classifier = ReferralClassifier()
-    return classifier.classify(text)
+    return _classifier_instance.classify(text)

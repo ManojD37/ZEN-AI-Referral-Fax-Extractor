@@ -1,12 +1,14 @@
 # app/main.py
-import sys
+# Main FastAPI application — handles file uploads, extraction, authentication, and admin settings.
 import time
+import asyncio
 from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from app.config import ALLOWED_ORIGINS
 
 from app.text_extractor import extract_with_metadata
 from app.gpt_client import extract_referral_from_text, extract_referral_from_images
@@ -36,27 +38,17 @@ class SettingsRequest(BaseModel):
     auto_fallback: Optional[bool] = None
     confidence_threshold: Optional[float] = None
 
-# Ensure path for relative imports
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
 # ========== FASTAPI APP INITIALIZATION ==========
 app = FastAPI(
-    title="medical-referral-extractor",
+    title="zenai-referral-extractor",
     version="2.0.0",
-    description="Medical referral document extraction service with Streamlit UI"
+    description="Medical referral document extraction service with React UI"
 )
 
-# ========== CORS ==========
+# ========== CORS (uses ALLOWED_ORIGINS from config.py) ==========
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8501",
-        "http://localhost",
-        "https://medical-referral-extractor.onrender.com",  # Render deployment
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
     allow_headers=["*"],
@@ -73,7 +65,7 @@ async def api_health():
     logger.info("API Health check endpoint called")
     return {
         "status": "healthy",
-        "service": "medical-referral-extractor",
+        "service": "zenai-referral-extractor",
         "version": "2.0.0",
         "supported_formats": list(SUPPORTED_EXTENSIONS),
     }
@@ -203,6 +195,7 @@ def ensure_required_fields(data: dict) -> dict:
 async def upload_file(file: UploadFile = File(...)):
     """Upload and process medical referral documents."""
     import uuid
+    start_time = time.time()  # Track processing time for the frontend
     job_id = str(uuid.uuid4())[:8]  # Short unique ID for tracking
     
     filename = (file.filename or "").lower()
@@ -233,7 +226,7 @@ async def upload_file(file: UploadFile = File(...)):
     # ---------- CONTENT EXTRACTION ----------
     try:
         logger.info(f"Extracting content from {ext} file")
-        content_data = extract_with_metadata(file)
+        content_data = await asyncio.to_thread(extract_with_metadata, file)
         content_type = content_data.get("type")
         logger.info(f"Content extraction complete. Type: {content_type}")
     except Exception as e:
@@ -277,7 +270,7 @@ async def upload_file(file: UploadFile = File(...)):
                         extraction_confidence = ocr_result.get("confidence", 0.7)
                         
                         # NER extraction
-                        extracted = extract_structured_data(raw_text)
+                        extracted = await asyncio.to_thread(extract_structured_data, raw_text)
                         logger.info(f"Free OCR extraction complete. Confidence: {extraction_confidence}")
                         
                         # Record cost (free)
@@ -293,7 +286,7 @@ async def upload_file(file: UploadFile = File(...)):
         if extracted is None:
             logger.info("Using GPT-4 Vision API")
             try:
-                extracted = extract_referral_from_images(images_base64, JSON_SCHEMA)
+                extracted = await asyncio.to_thread(extract_referral_from_images, images_base64, JSON_SCHEMA)
                 extraction_confidence = 0.95
                 logger.info("Vision extraction complete")
                 
@@ -334,7 +327,7 @@ async def upload_file(file: UploadFile = File(...)):
         # Classification
         try:
             logger.info("Classifying document")
-            classification = classify_document(raw_text)
+            classification = await asyncio.to_thread(classify_document, raw_text)
             logger.info(f"Classification: is_referral={classification['is_referral']}, confidence={classification['confidence']}")
         except Exception as e:
             logger.warning(f"Classification error: {e}")
@@ -351,7 +344,7 @@ async def upload_file(file: UploadFile = File(...)):
             try:
                 from app.ner_extractor import extract_structured_data
                 logger.info("Using FREE NER extraction (spaCy)")
-                extracted = extract_structured_data(raw_text)
+                extracted = await asyncio.to_thread(extract_structured_data, raw_text)
                 record_extraction("free", job_id, classification.get("confidence", 0.7))
                 logger.info("Free NER extraction complete")
             except Exception as e:
@@ -361,7 +354,7 @@ async def upload_file(file: UploadFile = File(...)):
         if extracted is None:
             try:
                 logger.info("Analyzing document with LLM")
-                extracted = extract_referral_from_text(raw_text, JSON_SCHEMA)
+                extracted = await asyncio.to_thread(extract_referral_from_text, raw_text, JSON_SCHEMA)
                 record_extraction("gpt", job_id, 0.95)
                 logger.info("LLM extraction complete")
             except Exception as e:
@@ -396,11 +389,15 @@ async def upload_file(file: UploadFile = File(...)):
         )
 
     # ---------- SAVE TO BLOB STORAGE ----------
-    extraction_id = blob_service.save_extraction(
+    extraction_id = await asyncio.to_thread(
+        blob_service.save_extraction,
         extracted_data=validated.dict(),
         filename=file.filename,
         text_stats=text_stats
     )
+
+    processing_time = round(time.time() - start_time, 2)
+    logger.info(f"Processing complete in {processing_time}s (job_id: {job_id})")
 
     return {
         "job_id": extraction_id,
@@ -409,7 +406,8 @@ async def upload_file(file: UploadFile = File(...)):
         "filename": file.filename,
         "classification": classification,
         "text_stats": text_stats,
-        "extracted": validated.dict()
+        "extracted": validated.dict(),
+        "processing_time_seconds": processing_time
     }
 
 

@@ -16,8 +16,8 @@ const Navbar = () => {
     checkAdmin();
     // Listen for storage changes
     window.addEventListener('storage', checkAdmin);
-    // Check periodically (for same-tab updates)
-    const interval = setInterval(checkAdmin, 1000);
+    // Check periodically for same-tab updates (5s is sufficient)
+    const interval = setInterval(checkAdmin, 5000);
     return () => {
       window.removeEventListener('storage', checkAdmin);
       clearInterval(interval);
@@ -48,7 +48,7 @@ const Navbar = () => {
             </div>
 
             <div className="flex flex-col">
-              <span className="text-xl font-bold text-gray-900">Medical Referral</span>
+              <span className="text-xl font-bold text-gray-900">ZenAI Referral</span>
               <span className="text-xs font-medium tracking-wider text-gray-600">AI-Powered Extraction</span>
             </div>
           </Link>

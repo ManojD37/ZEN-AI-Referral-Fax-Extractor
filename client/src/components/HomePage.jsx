@@ -28,7 +28,8 @@ const HomePage = () => {
       description: 'Upload PDF, images (JPG, PNG), text files, or Word documents',
       color: 'from-blue-500 to-cyan-500',
       bgColor: 'bg-blue-50',
-      iconBg: 'bg-blue-100'
+      iconBg: 'bg-blue-100',
+      iconColor: '#3b82f6' // blue-500
     },
     {
       icon: Zap,
@@ -36,7 +37,8 @@ const HomePage = () => {
       description: 'Advanced AI automatically identifies and extracts referral information',
       color: 'from-yellow-500 to-orange-500',
       bgColor: 'bg-yellow-50',
-      iconBg: 'bg-yellow-100'
+      iconBg: 'bg-yellow-100',
+      iconColor: '#f59e0b' // amber-500
     },
     {
       icon: Shield,
@@ -44,7 +46,8 @@ const HomePage = () => {
       description: 'Your documents are processed securely and never stored permanently',
       color: 'from-green-500 to-emerald-500',
       bgColor: 'bg-green-50',
-      iconBg: 'bg-green-100'
+      iconBg: 'bg-green-100',
+      iconColor: '#22c55e' // green-500
     },
     {
       icon: Clock,
@@ -52,7 +55,8 @@ const HomePage = () => {
       description: 'Get structured data in seconds, ready for review and export',
       color: 'from-purple-500 to-pink-500',
       bgColor: 'bg-purple-50',
-      iconBg: 'bg-purple-100'
+      iconBg: 'bg-purple-100',
+      iconColor: '#a855f7' // purple-500
     }
   ];
 
@@ -77,8 +81,8 @@ const HomePage = () => {
     },
     {
       step: 4,
-      title: 'Export Data',
-      description: 'Download the structured data as JSON or integrate with your systems',
+      title: 'Review & Use',
+      description: 'Review the structured data and integrate with your healthcare systems',
       icon: CheckCircle
     }
   ];
@@ -108,7 +112,7 @@ const HomePage = () => {
             </div>
             
             <h1 className="text-6xl font-extrabold mb-6 text-white leading-tight">
-              Medical Referral<br />
+              ZenAI Referral<br />
               <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">
                 Extractor
               </span>
@@ -177,8 +181,7 @@ const HomePage = () => {
               <div className="relative">
                 <div className={`${feature.iconBg} w-16 h-16 rounded-xl flex items-center justify-center mb-6
                               group-hover:scale-110 transition-transform duration-300`}>
-                  <feature.icon className={`h-8 w-8 bg-gradient-to-br ${feature.color} bg-clip-text text-transparent`} 
-                               style={{WebkitTextFillColor: 'transparent', WebkitBackgroundClip: 'text'}} />
+                  <feature.icon className="h-8 w-8" style={{ color: feature.iconColor }} />
                 </div>
                 <h3 className="text-xl font-bold mb-3 text-gray-800">
                   {feature.title}
@@ -298,7 +301,7 @@ const HomePage = () => {
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
           <h2 className="text-4xl font-bold mb-4 text-white">
-            Ready to Extract Your Medical Referrals?
+            Ready to Extract Your Referrals?
           </h2>
           <p className="text-xl mb-10 text-blue-100 max-w-2xl mx-auto">
             Upload your first document and experience the power of AI-driven extraction
@@ -322,10 +325,10 @@ const HomePage = () => {
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-4">
               <FileText className="h-6 w-6 text-blue-400" />
-              <span className="text-lg font-bold text-white">Medical Referral Extractor</span>
+              <span className="text-lg font-bold text-white">ZenAI Referral Extractor</span>
             </div>
             <p className="text-slate-400 mb-2">
-              © 2025 Medical Referral Extractor. All rights reserved.
+              © 2025 ZenAI Referral Extractor. All rights reserved.
             </p>
             <p className="text-slate-500 text-sm">
               Powered by Azure OpenAI & Advanced AI Technology

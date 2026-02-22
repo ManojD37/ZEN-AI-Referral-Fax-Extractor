@@ -77,6 +77,7 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost",
     "http://localhost:80",
+    "https://medical-referral-extractor.onrender.com",  # Render deployment
 ]
 
 # Add frontend URL from environment

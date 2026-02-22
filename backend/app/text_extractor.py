@@ -12,7 +12,7 @@ from fastapi import UploadFile
 from app.log import logger
 
 
-def pdf_to_images_base64(pdf_path: str, dpi: int = 150) -> List[str]:
+def pdf_to_images_base64(pdf_path: str, dpi: int = 120) -> List[str]:
     """
     Convert PDF pages to base64-encoded PNG images using PyMuPDF.
     

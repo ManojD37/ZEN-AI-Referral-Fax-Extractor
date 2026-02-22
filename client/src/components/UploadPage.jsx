@@ -1,7 +1,7 @@
 // src/components/UploadPage.jsx - Bulk upload with accurate progress tracking
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, FileText, AlertCircle, Loader, CheckCircle, X, Sparkles, Zap, Trash2, List } from 'lucide-react';
+import { Upload, FileText, AlertCircle, Loader, CheckCircle, X, Sparkles, Zap, Trash2, List, RefreshCw } from 'lucide-react';
 import { uploadFile } from '../services/api';
 import { saveToHistory } from '../services/storage';
 
@@ -19,6 +19,8 @@ const UploadPage = ({ setCurrentResult, setUploadedFile, setResults }) => {
   const [error, setError] = useState(null);
   const [currentFileIndex, setCurrentFileIndex] = useState(0);
   const [completedFiles, setCompletedFiles] = useState([]);
+  const [uploadComplete, setUploadComplete] = useState(false);
+  const [failedFiles, setFailedFiles] = useState([]); // Track failed files for retry
 
   const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.txt', '.docx'];
 
@@ -138,6 +140,7 @@ const UploadPage = ({ setCurrentResult, setUploadedFile, setResults }) => {
           console.error(`Error processing ${file.name}:`, fileError);
           results.push({ file, error: fileError, success: false });
           setCompletedFiles(prev => [...prev, { name: file.name, success: false }]);
+          setFailedFiles(prev => [...prev, file]); // Track for retry
         }
       }
 
@@ -159,10 +162,8 @@ const UploadPage = ({ setCurrentResult, setUploadedFile, setResults }) => {
           setUploadedFile(lastResult.file);
         }
         
-        // Short delay to show completion, then navigate
-        setTimeout(() => {
-          navigate('/output');
-        }, 1500);
+        // Show success state - user clicks to navigate
+        setUploadComplete(true);
       } else {
         setError('All files failed to process. Check the console for details.');
       }
@@ -402,7 +403,54 @@ const UploadPage = ({ setCurrentResult, setUploadedFile, setResults }) => {
                 </div>
               )}
 
+              {/* Success Completion State */}
+              {uploadComplete && (
+                <div className="space-y-4 p-8 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border-2 border-green-300">
+                  <div className="text-center">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500 rounded-full mb-4">
+                      <CheckCircle className="h-10 w-10 text-white" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-green-800 mb-2">
+                      Processing Complete!
+                    </h3>
+                    <p className="text-green-700 text-lg mb-1">
+                      {completedFiles.filter(f => f.success).length} of {completedFiles.length} file{completedFiles.length !== 1 ? 's' : ''} processed successfully
+                    </p>
+                    {completedFiles.some(f => !f.success) && (
+                      <p className="text-red-600 text-sm">
+                        {completedFiles.filter(f => !f.success).length} file{completedFiles.filter(f => !f.success).length !== 1 ? 's' : ''} failed
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => navigate('/output')}
+                    className="w-full py-5 rounded-2xl font-bold text-white text-xl
+                      flex items-center justify-center space-x-3
+                      bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 
+                      hover:from-blue-700 hover:via-blue-800 hover:to-indigo-800 
+                      hover:scale-[1.02] shadow-2xl transition-all duration-300 transform"
+                  >
+                    <FileText className="h-6 w-6" />
+                    <span>View Extracted Results</span>
+                    <span className="text-2xl">→</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setUploadComplete(false);
+                      setSelectedFiles([]);
+                      setCompletedFiles([]);
+                      setUploadProgress(0);
+                    }}
+                    className="w-full py-3 rounded-xl font-medium text-gray-600 text-sm
+                      hover:bg-gray-100 transition-all duration-200 border border-gray-300"
+                  >
+                    Upload More Files
+                  </button>
+                </div>
+              )}
+
               {/* Upload Button */}
+              {!uploadComplete && (
               <button
                 onClick={handleUpload}
                 disabled={uploading}
@@ -429,19 +477,41 @@ const UploadPage = ({ setCurrentResult, setUploadedFile, setResults }) => {
                   </>
                 )}
               </button>
+              )}
             </div>
           )}
 
           {/* Error Display */}
           {error && (
-            <div className="mt-8 p-6 bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-200 rounded-2xl flex items-start space-x-4">
-              <div className="bg-red-100 p-2 rounded-lg">
-                <AlertCircle className="h-7 w-7 text-red-600" />
+            <div className="mt-8 p-6 bg-gradient-to-r from-red-50 to-pink-50 border-2 border-red-200 rounded-2xl">
+              <div className="flex items-start space-x-4">
+                <div className="bg-red-100 p-2 rounded-lg">
+                  <AlertCircle className="h-7 w-7 text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-red-800 text-xl mb-1">Error</p>
+                  <p className="text-red-700 text-lg">{error}</p>
+                </div>
               </div>
-              <div>
-                <p className="font-bold text-red-800 text-xl mb-1">Error</p>
-                <p className="text-red-700 text-lg">{error}</p>
-              </div>
+              {/* Retry Button */}
+              <button
+                onClick={() => {
+                  setError(null);
+                  if (failedFiles.length > 0) {
+                    // Retry only the failed files
+                    setSelectedFiles(failedFiles);
+                    setFailedFiles([]);
+                    setCompletedFiles([]);
+                    setUploadProgress(0);
+                  }
+                  // User can click the upload button to retry
+                }}
+                className="mt-4 flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white font-semibold 
+                         rounded-xl hover:bg-red-700 transition-all shadow-md"
+              >
+                <RefreshCw className="h-5 w-5" />
+                <span>{failedFiles.length > 0 ? `Retry ${failedFiles.length} Failed File${failedFiles.length !== 1 ? 's' : ''}` : 'Try Again'}</span>
+              </button>
             </div>
           )}
         </div>
