@@ -6,7 +6,7 @@ import Navbar from './components/Navbar';
 import HomePage from './components/HomePage';
 import UploadPage from './components/UploadPage';
 import OutputPage from './components/OutputPage';
-import HistoryPage from './components/HistoryPage';
+
 import AdminSettings from './components/AdminSettings';
 import './App.css';
 
@@ -32,7 +32,7 @@ function App() {
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<HomePage setResults={handleSetResults} />} />
           <Route 
             path="/upload" 
             element={
@@ -56,7 +56,7 @@ function App() {
               />
             } 
           />
-          <Route path="/history" element={<HistoryPage />} />
+
           <Route path="/admin" element={<AdminSettings />} />
         </Routes>
       </div>

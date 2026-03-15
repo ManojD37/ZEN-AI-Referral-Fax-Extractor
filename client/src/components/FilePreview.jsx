@@ -30,8 +30,91 @@ const FilePreview = ({ file, activeField, onFieldHighlight }) => {
       return;
     }
 
-    const ext = file.name.split('.').pop().toLowerCase();
+    const ext = file.name ? file.name.split('.').pop().toLowerCase() : '';
     setFileType(ext);
+    
+    // If we have pre-generated base64 preview data (e.g., from history)
+    if (file.previewData) {
+      if (ext === 'txt') {
+        try {
+          const base64Content = file.previewData.split(',')[1];
+          if (base64Content) {
+            const decodedBytes = atob(base64Content);
+            const bytes = new Uint8Array(decodedBytes.length);
+            for (let i = 0; i < decodedBytes.length; i++) {
+              bytes[i] = decodedBytes.charCodeAt(i);
+            }
+            const text = new TextDecoder('utf-8').decode(bytes);
+            setPreview(text);
+          } else {
+            setPreview(file.previewData);
+          }
+        } catch (e) {
+          console.error("Failed to decode text preview", e);
+          setPreview(file.previewData);
+        }
+        setLoading(false);
+        return;
+      }
+      
+      if (ext === 'pdf') {
+        setLoading(true);
+        try {
+          const pdfjsLib = window.pdfjsLib;
+          if (pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            const base64Content = file.previewData.split(',')[1];
+            if (base64Content) {
+              const binaryString = atob(base64Content);
+              const len = binaryString.length;
+              const bytes = new Uint8Array(len);
+              for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+              }
+              const loadingTask = pdfjsLib.getDocument({ data: bytes });
+              loadingTask.promise.then(async (pdf) => {
+                const pages = [];
+                for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
+                  const page = await pdf.getPage(i);
+                  const scale = 1.5;
+                  const viewport = page.getViewport({ scale });
+                  const canvas = document.createElement('canvas');
+                  const context = canvas.getContext('2d');
+                  canvas.height = viewport.height;
+                  canvas.width = viewport.width;
+                  await page.render({ canvasContext: context, viewport }).promise;
+                  pages.push(canvas.toDataURL('image/png'));
+                }
+                setPdfPages(pages);
+                if (pages.length > 0) {
+                  setPreview(pages[0]);
+                }
+                setLoading(false);
+              }).catch(e => {
+                console.error("PDF rendering error", e);
+                setPreview(null);
+                setLoading(false);
+              });
+              return;
+            }
+          }
+        } catch (e) {
+          console.error("PDF init error", e);
+        }
+      }
+
+      setPreview(file.previewData);
+      setLoading(false);
+      return;
+    }
+
+    // If this is a mock file from history and we have NO previewData,
+    // we can't preview it since we don't have the Blob.
+    if (file.isHistory) {
+      setPreview(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -131,12 +214,27 @@ const FilePreview = ({ file, activeField, onFieldHighlight }) => {
     setZoom(prev => Math.max(0.5, Math.min(3, prev + delta)));
   };
 
+  // If no file but we have a filename (from history), show graceful fallback
+  if (!file && !activeField && !onFieldHighlight) {
+    // We don't have enough info inside FilePreview alone if just 'file' is missing
+    // OutputPage should pass down 'result.filename' or we need to add a prop.
+    // Let's check `file` props below:
+  }
+
   if (!file) {
+    // If it's a historical file passed as a mock object { name: '...', isHistory: true }
+    // we would handle it here. Since OutputPage passes `null` right now if no file,
+    // we need to change OutputPage to pass a mock file object.
     return (
-      <div className="bg-white rounded-lg h-full flex items-center justify-center">
-        <div className="text-center py-12">
-          <AlertCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">No file uploaded</p>
+      <div className="bg-white rounded-lg h-full flex flex-col items-center justify-center border-2 border-dashed border-gray-200">
+        <div className="text-center py-12 px-4">
+          <div className="bg-gray-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <FileText className="h-8 w-8 text-gray-400" />
+          </div>
+          <p className="text-lg font-bold text-gray-700 mb-1">Preview Unavailable</p>
+          <p className="text-sm text-gray-500 max-w-xs mx-auto text-center leading-relaxed">
+            The original document preview is not available for historical extractions.
+          </p>
         </div>
       </div>
     );
@@ -334,7 +432,7 @@ const FilePreview = ({ file, activeField, onFieldHighlight }) => {
       {/* File info */}
       <div className="text-xs text-gray-500 mb-3 flex items-center justify-between">
         <span>{file.name}</span>
-        <span>{(file.size / 1024).toFixed(2)} KB</span>
+        <span>{file.size ? (file.size / 1024).toFixed(2) + ' KB' : 'Unknown Size'}</span>
       </div>
       
       {/* Preview content */}

@@ -608,15 +608,22 @@ const OutputPage = ({ result, uploadedFile, allResults = [], allUploadedFiles = 
           {/* LEFT PANEL - Document Preview (Sticky) */}
           <div className="w-1/2 sticky top-36 h-[calc(100vh-160px)] overflow-hidden">
             <div className="bg-white rounded-2xl shadow-xl border border-gray-100 h-full p-6 overflow-auto">
-              {currentFile ? (
-                <FilePreview file={currentFile} activeField={activeField} />
+              {(currentFile || currentResult?.filename) ? (
+                <FilePreview 
+                  file={currentFile || { 
+                    name: currentResult.filename, 
+                    isHistory: true,
+                    previewData: currentResult.previewData 
+                  }} 
+                  activeField={activeField} 
+                />
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <AlertCircle className="h-16 w-16 text-amber-500 mx-auto mb-4" />
                     <p className="font-bold text-amber-900 text-lg">Preview Not Available</p>
                     <p className="text-amber-700 text-sm mt-2">
-                      File was cleared from memory. Data is still available for editing.
+                      Original document could not be found.
                     </p>
                   </div>
                 </div>

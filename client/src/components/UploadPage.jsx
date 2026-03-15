@@ -131,8 +131,23 @@ const UploadPage = ({ setCurrentResult, setUploadedFile, setResults }) => {
           setProcessingStatus(`AI Processing ${file.name}...`);
           setUploadProgress(Math.round(baseProgress + fileProgressRange));
 
-          // Save to history
-          saveToHistory(result);
+          // Generate a lightweight preview for history (only if < 2MB to save localStorage space)
+          let previewData = null;
+          if (file.size <= 2 * 1024 * 1024) {
+             try {
+                previewData = await new Promise((resolve) => {
+                  const reader = new FileReader();
+                  reader.onloadend = () => resolve(reader.result);
+                  reader.onerror = () => resolve(null);
+                  reader.readAsDataURL(file);
+                });
+             } catch (e) {
+                console.warn('Failed to generate preview for history', e);
+             }
+          }
+
+          // Save to history including the preview string
+          saveToHistory(result, previewData);
           results.push({ file, result, success: true });
           setCompletedFiles(prev => [...prev, { name: file.name, success: true }]);
 

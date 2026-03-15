@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, Upload, History, FileText, Activity, FilePlus, Settings } from "lucide-react";
+import { Home, Upload, FileText, Activity, FilePlus, Settings } from "lucide-react";
 
 const Navbar = () => {
   const location = useLocation();
@@ -30,7 +30,6 @@ const Navbar = () => {
   const navLinks = [
     { path: "/", label: "Home", icon: Home },
     { path: "/upload", label: "Upload", icon: Upload },
-    { path: "/history", label: "History", icon: History },
   ];
 
   return (
