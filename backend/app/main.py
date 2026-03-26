@@ -395,6 +395,9 @@ async def upload_file(file: UploadFile = File(...)):
         filename=file.filename,
         text_stats=text_stats
     )
+    # Fallback: if blob storage is not configured, use the local job_id
+    if not extraction_id:
+        extraction_id = job_id
 
     processing_time = round(time.time() - start_time, 2)
     logger.info(f"Processing complete in {processing_time}s (job_id: {job_id})")

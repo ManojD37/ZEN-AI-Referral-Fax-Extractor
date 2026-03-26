@@ -141,7 +141,7 @@ const OutputPage = ({ result, uploadedFile, allResults = [], allUploadedFiles = 
   useEffect(() => {
     const cur = selectedDocIndex !== null ? allResults[selectedDocIndex] : result;
     if (cur) {
-      const id = cur.id || cur.job_id;
+      const id = cur.id || cur.job_id || cur.extraction_id;
       if (id) {
         const historyItem = getHistoryById(id);
         if (historyItem && historyItem.status) {
@@ -199,8 +199,15 @@ const OutputPage = ({ result, uploadedFile, allResults = [], allUploadedFiles = 
   const handleStatusChange = (newStatus) => {
     const cur = selectedDocIndex !== null ? allResults[selectedDocIndex] : result;
     if (!cur) return;
-    const id = cur.id || cur.job_id;
-    if (!id) return;
+    const id = cur.id || cur.job_id || cur.extraction_id;
+    if (!id) {
+      console.warn('handleStatusChange: no valid ID found on document', cur);
+      // Still update local state so the UI responds
+      setDocStatus(newStatus);
+      setSavedMessage(`Marked as ${newStatus} (local only)`);
+      setTimeout(() => setSavedMessage(''), 3000);
+      return;
+    }
     updateDocumentStatus(id, newStatus);
     setDocStatus(newStatus);
     setSavedMessage(`Marked as ${newStatus}`);

@@ -147,8 +147,8 @@ const UploadPage = ({ setCurrentResult, setUploadedFile, setResults }) => {
           }
 
           // Save to history including the preview string
-          saveToHistory(result, previewData);
-          results.push({ file, result, success: true });
+          const savedEntry = saveToHistory(result, previewData);
+          results.push({ file, result: savedEntry, success: true });
           setCompletedFiles(prev => [...prev, { name: file.name, success: true }]);
 
         } catch (fileError) {
