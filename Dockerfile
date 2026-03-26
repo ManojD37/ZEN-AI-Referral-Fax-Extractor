@@ -2,7 +2,7 @@
 # Multi-stage build: Frontend (React) + Backend (FastAPI)
 
 # Stage 1: Build React frontend
-FROM node:18-alpine AS frontend-build
+FROM node:20-alpine AS frontend-build
 WORKDIR /app/client
 COPY client/package*.json ./
 RUN npm ci
