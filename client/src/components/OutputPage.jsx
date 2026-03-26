@@ -135,6 +135,14 @@ const OutputPage = ({ result, uploadedFile, allResults = [], allUploadedFiles = 
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  // Status management (Complete / Reject / Reset)
+  const [docStatus, setDocStatus] = useState(null);
+
+  useEffect(() => {
+    const cur = selectedDocIndex !== null ? allResults[selectedDocIndex] : result;
+    if (cur) setDocStatus(cur.status || 'new');
+  }, [selectedDocIndex, allResults, result]);
+
   if (!currentResult && allResults.length === 0) {
     return null;
   }
@@ -177,14 +185,6 @@ const OutputPage = ({ result, uploadedFile, allResults = [], allUploadedFiles = 
   const clearDraft = () => {
     localStorage.removeItem(AUTOSAVE_KEY);
   };
-
-  // Status management (Complete / Reject / Reset)
-  const [docStatus, setDocStatus] = useState(null);
-
-  useEffect(() => {
-    const cur = selectedDocIndex !== null ? allResults[selectedDocIndex] : result;
-    if (cur) setDocStatus(cur.status || 'new');
-  }, [selectedDocIndex, allResults, result]);
 
   const handleStatusChange = (newStatus) => {
     const cur = selectedDocIndex !== null ? allResults[selectedDocIndex] : result;

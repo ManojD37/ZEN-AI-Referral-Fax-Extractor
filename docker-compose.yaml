@@ -4,7 +4,7 @@ services:
   app:
     build: .
     ports:
-      - "8000:8000"  # Unified port for React (Frontend) and FastAPI (API)
+      - "8080:8000"  # Unified port for React (Frontend) and FastAPI (API)
     environment:
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
       - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
