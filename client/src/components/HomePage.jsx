@@ -350,94 +350,57 @@ const HomePage = ({ setResults }) => {
             </div>
           </div>
 
-          {/* Document Cards */}
+          {/* Documents Table */}
           {paginatedDocuments.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
-              {paginatedDocuments.map((doc) => {
-                const patientName = doc.extracted?.patient?.full_name || 'Unknown Patient';
-                const referralTo = doc.extracted?.referral?.referral_to || 'N/A';
-                const fileType = (doc.file_type || doc.filename?.split('.').pop() || 'N/A').toUpperCase();
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-8">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-slate-50 to-blue-50 border-b border-gray-200">
+                      <th className="text-left px-6 py-4 font-bold text-gray-600 text-xs uppercase tracking-wider">Document</th>
+                      <th className="text-left px-6 py-4 font-bold text-gray-600 text-xs uppercase tracking-wider hidden md:table-cell">Patient</th>
+                      <th className="text-left px-6 py-4 font-bold text-gray-600 text-xs uppercase tracking-wider hidden lg:table-cell">Referral To</th>
+                      <th className="text-left px-6 py-4 font-bold text-gray-600 text-xs uppercase tracking-wider hidden sm:table-cell">Date</th>
+                      <th className="text-right px-6 py-4 font-bold text-gray-600 text-xs uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {paginatedDocuments.map((doc) => {
+                      const patientName = doc.extracted?.patient?.full_name || 'Unknown Patient';
+                      const referralTo = doc.extracted?.referral?.referral_to || 'N/A';
 
-                return (
-                  <div
-                    key={doc.id}
-                    onClick={() => handleDocumentClick(doc)}
-                    className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 
-                             hover:shadow-xl hover:border-blue-200 transition-all duration-300 group cursor-pointer"
-                  >
-                    {/* Top Row */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <div className="text-3xl flex-shrink-0">{getFileIcon(doc.filename)}</div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-bold text-gray-800 text-lg truncate group-hover:text-blue-600 transition-colors">
-                              {doc.filename || 'Document'}
-                            </h3>
-                            <span className="flex-shrink-0 px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded-md">
-                              {fileType}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 text-sm text-gray-500">
-                            <span className="flex items-center gap-1">
-                              <User className="h-3.5 w-3.5 text-green-500" />
-                              <span className="truncate">{patientName}</span>
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Building className="h-3.5 w-3.5 text-purple-500" />
-                              <span className="truncate">{referralTo}</span>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      {getStatusBadge(doc.status)}
-                    </div>
-
-                    {/* Upload Date */}
-                    <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-4 pl-0.5">
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span>Uploaded: {formatDate(doc.timestamp)}</span>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
-                      {doc.status !== 'completed' && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleStatusChange(doc.id, 'completed'); }}
-                          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 
-                                   bg-green-50 text-green-700 rounded-xl text-sm font-semibold
-                                   hover:bg-green-100 border border-green-200 hover:border-green-300 transition-all"
+                      return (
+                        <tr
+                          key={doc.id}
+                          onClick={() => handleDocumentClick(doc)}
+                          className="hover:bg-blue-50/50 cursor-pointer transition-colors duration-150 group"
                         >
-                          <CheckCircle className="h-4 w-4" />
-                          <span>Complete</span>
-                        </button>
-                      )}
-                      {doc.status !== 'rejected' && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleStatusChange(doc.id, 'rejected'); }}
-                          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 
-                                   bg-red-50 text-red-700 rounded-xl text-sm font-semibold
-                                   hover:bg-red-100 border border-red-200 hover:border-red-300 transition-all"
-                        >
-                          <XCircle className="h-4 w-4" />
-                          <span>Reject</span>
-                        </button>
-                      )}
-                      {(doc.status === 'completed' || doc.status === 'rejected') && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleStatusChange(doc.id, 'new'); }}
-                          className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 
-                                   bg-blue-50 text-blue-700 rounded-xl text-sm font-semibold
-                                   hover:bg-blue-100 border border-blue-200 hover:border-blue-300 transition-all"
-                        >
-                          <Sparkles className="h-4 w-4" />
-                          <span>Reset to New</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="text-xl flex-shrink-0">{getFileIcon(doc.filename)}</span>
+                              <span className="font-semibold text-gray-800 truncate max-w-[200px] group-hover:text-blue-600 transition-colors">
+                                {doc.filename || 'Document'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 hidden md:table-cell">
+                            <span className="text-gray-600 truncate block max-w-[180px]">{patientName}</span>
+                          </td>
+                          <td className="px-6 py-4 hidden lg:table-cell">
+                            <span className="text-gray-600 truncate block max-w-[180px]">{referralTo}</span>
+                          </td>
+                          <td className="px-6 py-4 hidden sm:table-cell">
+                            <span className="text-gray-500 text-xs whitespace-nowrap">{formatDate(doc.timestamp)}</span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            {getStatusBadge(doc.status)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : (
             <div className="bg-white p-12 rounded-2xl shadow-lg text-center border border-gray-100 mb-8">

@@ -1,8 +1,9 @@
 // src/components/OutputPage.jsx - Document list with search, detail view with preview, JSON toggle
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Edit2, Save, X, FileText, ArrowLeft, User, Building, Activity, AlertCircle, Shield, Search, Code, LayoutList, ChevronRight, Calendar, Stethoscope, TrendingUp, FileCheck, Hash, Clock, Keyboard } from 'lucide-react';
+import { Edit2, Save, X, FileText, ArrowLeft, User, Building, Activity, AlertCircle, Shield, Search, Code, LayoutList, ChevronRight, Calendar, Stethoscope, TrendingUp, FileCheck, Hash, Clock, Keyboard, CheckCircle, XCircle, Sparkles } from 'lucide-react';
 import FilePreview from './FilePreview';
+import { updateDocumentStatus } from '../services/storage';
 
 // Auto-save key for localStorage
 const AUTOSAVE_KEY = 'referral_draft';
@@ -175,6 +176,25 @@ const OutputPage = ({ result, uploadedFile, allResults = [], allUploadedFiles = 
 
   const clearDraft = () => {
     localStorage.removeItem(AUTOSAVE_KEY);
+  };
+
+  // Status management (Complete / Reject / Reset)
+  const [docStatus, setDocStatus] = useState(null);
+
+  useEffect(() => {
+    const cur = selectedDocIndex !== null ? allResults[selectedDocIndex] : result;
+    if (cur) setDocStatus(cur.status || 'new');
+  }, [selectedDocIndex, allResults, result]);
+
+  const handleStatusChange = (newStatus) => {
+    const cur = selectedDocIndex !== null ? allResults[selectedDocIndex] : result;
+    if (!cur) return;
+    const id = cur.id || cur.job_id;
+    if (!id) return;
+    updateDocumentStatus(id, newStatus);
+    setDocStatus(newStatus);
+    setSavedMessage(`Marked as ${newStatus}`);
+    setTimeout(() => setSavedMessage(''), 3000);
   };
 
   // Input field component
@@ -565,6 +585,40 @@ const OutputPage = ({ result, uploadedFile, allResults = [], allUploadedFiles = 
                   <span>JSON</span>
                 </button>
               </div>
+
+              <div className="w-px h-5 bg-gray-300 mx-0.5" />
+
+              {/* Status Action Buttons */}
+              {docStatus !== 'completed' && (
+                <button
+                  onClick={() => handleStatusChange('completed')}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700
+                           rounded-lg hover:bg-green-100 border border-green-200 hover:border-green-300 transition-all text-sm font-medium"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Complete</span>
+                </button>
+              )}
+              {docStatus !== 'rejected' && (
+                <button
+                  onClick={() => handleStatusChange('rejected')}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-700
+                           rounded-lg hover:bg-red-100 border border-red-200 hover:border-red-300 transition-all text-sm font-medium"
+                >
+                  <XCircle className="h-4 w-4" />
+                  <span>Reject</span>
+                </button>
+              )}
+              {(docStatus === 'completed' || docStatus === 'rejected') && (
+                <button
+                  onClick={() => handleStatusChange('new')}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700
+                           rounded-lg hover:bg-blue-100 border border-blue-200 hover:border-blue-300 transition-all text-sm font-medium"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span>Reset</span>
+                </button>
+              )}
 
               <div className="w-px h-5 bg-gray-300 mx-0.5" />
               
