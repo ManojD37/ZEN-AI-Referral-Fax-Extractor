@@ -1,17 +1,11 @@
-version: '3.8'
-
 services:
   app:
     build: .
     ports:
       - "8080:8000"  # Unified port for React (Frontend) and FastAPI (API)
+    env_file:
+      - ./backend/.env
     environment:
-      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
-      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
-      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT}
-      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}
-      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
-      - AZURE_BLOB_CONTAINER=${AZURE_BLOB_CONTAINER}
       - ENVIRONMENT=local
       - DEBUG=true
     volumes:

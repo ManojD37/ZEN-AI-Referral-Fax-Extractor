@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Edit2, Save, X, FileText, ArrowLeft, User, Building, Activity, AlertCircle, Shield, Search, Code, LayoutList, ChevronRight, Calendar, Stethoscope, TrendingUp, FileCheck, Hash, Clock, Keyboard, CheckCircle, XCircle, Sparkles } from 'lucide-react';
 import FilePreview from './FilePreview';
-import { updateDocumentStatus } from '../services/storage';
+import { updateDocumentStatus, getHistoryById } from '../services/storage';
 
 // Auto-save key for localStorage
 const AUTOSAVE_KEY = 'referral_draft';
@@ -140,7 +140,17 @@ const OutputPage = ({ result, uploadedFile, allResults = [], allUploadedFiles = 
 
   useEffect(() => {
     const cur = selectedDocIndex !== null ? allResults[selectedDocIndex] : result;
-    if (cur) setDocStatus(cur.status || 'new');
+    if (cur) {
+      const id = cur.id || cur.job_id;
+      if (id) {
+        const historyItem = getHistoryById(id);
+        if (historyItem && historyItem.status) {
+          setDocStatus(historyItem.status);
+          return;
+        }
+      }
+      setDocStatus(cur.status || 'new');
+    }
   }, [selectedDocIndex, allResults, result]);
 
   if (!currentResult && allResults.length === 0) {
