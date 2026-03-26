@@ -588,38 +588,7 @@ const OutputPage = ({ result, uploadedFile, allResults = [], allUploadedFiles = 
 
               <div className="w-px h-5 bg-gray-300 mx-0.5" />
 
-              {/* Status Action Buttons */}
-              {docStatus !== 'completed' && (
-                <button
-                  onClick={() => handleStatusChange('completed')}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700
-                           rounded-lg hover:bg-green-100 border border-green-200 hover:border-green-300 transition-all text-sm font-medium"
-                >
-                  <CheckCircle className="h-4 w-4" />
-                  <span>Complete</span>
-                </button>
-              )}
-              {docStatus !== 'rejected' && (
-                <button
-                  onClick={() => handleStatusChange('rejected')}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-700
-                           rounded-lg hover:bg-red-100 border border-red-200 hover:border-red-300 transition-all text-sm font-medium"
-                >
-                  <XCircle className="h-4 w-4" />
-                  <span>Reject</span>
-                </button>
-              )}
-              {(docStatus === 'completed' || docStatus === 'rejected') && (
-                <button
-                  onClick={() => handleStatusChange('new')}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700
-                           rounded-lg hover:bg-blue-100 border border-blue-200 hover:border-blue-300 transition-all text-sm font-medium"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span>Reset</span>
-                </button>
-              )}
-
+              {/* Status Action Buttons Moved to Main View */}
               <div className="w-px h-5 bg-gray-300 mx-0.5" />
               
               {editMode ? (
@@ -687,6 +656,43 @@ const OutputPage = ({ result, uploadedFile, allResults = [], allUploadedFiles = 
 
           {/* RIGHT PANEL - Extracted Data (Scrollable) */}
           <div className="w-1/2 space-y-4">
+            {/* Prominent Action Bar for Setting Status */}
+            <div className="bg-white p-4 rounded-xl shadow-md border border-gray-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-gray-800">Document Status</h3>
+                <p className="text-xs text-gray-500">Mark this file as complete or reject it</p>
+              </div>
+              <div className="flex gap-3">
+                {docStatus !== 'rejected' && (
+                  <button
+                    onClick={() => handleStatusChange('rejected')}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-red-700 font-bold rounded-xl hover:bg-red-100 hover:shadow-sm border border-red-200 transition-all"
+                  >
+                    <XCircle className="h-5 w-5" />
+                    Reject File
+                  </button>
+                )}
+                {docStatus !== 'completed' && (
+                  <button
+                    onClick={() => handleStatusChange('completed')}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 hover:shadow-md transition-all shadow-sm"
+                  >
+                    <CheckCircle className="h-5 w-5" />
+                    Complete File
+                  </button>
+                )}
+                {(docStatus === 'completed' || docStatus === 'rejected') && (
+                  <button
+                     onClick={() => handleStatusChange('new')}
+                     className="flex items-center gap-2 px-5 py-2.5 bg-blue-50 text-blue-700 font-bold rounded-xl hover:bg-blue-100 hover:shadow-sm border border-blue-200 transition-all"
+                  >
+                    <Sparkles className="h-5 w-5" />
+                    Reset Status
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Classification Banner */}
             {currentResult.classification && (
               <div className={`p-4 rounded-xl shadow-md ${
