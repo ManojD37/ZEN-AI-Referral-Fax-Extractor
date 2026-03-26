@@ -96,6 +96,58 @@ const UploadPage = ({ setCurrentResult, setUploadedFile, setResults }) => {
     }
   };
 
+  // Generate preview data for a file (runs in parallel with upload)
+  const generatePreview = (file) => {
+    if (file.size > 2 * 1024 * 1024) return Promise.resolve(null);
+    return new Promise((resolve) => {
+      try {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      } catch {
+        resolve(null);
+      }
+    });
+  };
+
+  // Process a single file (upload + save to history)
+  const processSingleFile = async (file, index, totalFiles) => {
+    try {
+      // Start preview generation immediately (runs in parallel with API call)
+      const previewPromise = generatePreview(file);
+
+      setProcessingStatus(`Processing ${file.name}...`);
+
+      // Upload and extract via API
+      const result = await uploadFile(file, () => {});
+
+      // Wait for preview (usually already done by now since uploads take longer)
+      const previewData = await previewPromise;
+
+      // Save to history
+      const savedEntry = saveToHistory(result, previewData);
+
+      // Update progress atomically
+      setCompletedFiles(prev => {
+        const updated = [...prev, { name: file.name, success: true }];
+        setUploadProgress(Math.round((updated.length / totalFiles) * 100));
+        return updated;
+      });
+
+      return { file, result: savedEntry, success: true };
+    } catch (fileError) {
+      console.error(`Error processing ${file.name}:`, fileError);
+      setCompletedFiles(prev => {
+        const updated = [...prev, { name: file.name, success: false }];
+        setUploadProgress(Math.round((updated.length / totalFiles) * 100));
+        return updated;
+      });
+      setFailedFiles(prev => [...prev, file]);
+      return { file, error: fileError, success: false };
+    }
+  };
+
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return;
 
@@ -104,58 +156,33 @@ const UploadPage = ({ setCurrentResult, setUploadedFile, setResults }) => {
     setUploadProgress(0);
     setCompletedFiles([]);
     setCurrentFileIndex(0);
+    setFailedFiles([]);
 
-    const results = [];
     const totalFiles = selectedFiles.length;
 
     try {
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const file = selectedFiles[i];
-        setCurrentFileIndex(i);
-        
-        // Calculate base progress for this file
-        const baseProgress = (i / totalFiles) * 100;
-        const fileProgressRange = 100 / totalFiles;
+      let results;
 
-        try {
-          // Phase 1: Uploading (0-50% of file's progress)
-          setProcessingStatus(`Uploading ${file.name}...`);
-          
-          const result = await uploadFile(file, (progress) => {
-            // Map upload progress (0-100) to first half of file's range
-            const uploadPortion = (progress / 100) * (fileProgressRange * 0.5);
-            setUploadProgress(Math.round(baseProgress + uploadPortion));
+      if (totalFiles === 1) {
+        // Single file — process directly
+        setProcessingStatus(`Processing ${selectedFiles[0].name}...`);
+        const res = await processSingleFile(selectedFiles[0], 0, 1);
+        results = [res];
+      } else {
+        // Multiple files — process in parallel with concurrency cap of 3
+        const MAX_CONCURRENT = 3;
+        results = [];
+        setProcessingStatus(`Processing ${totalFiles} files in parallel...`);
+
+        for (let i = 0; i < totalFiles; i += MAX_CONCURRENT) {
+          const batch = selectedFiles.slice(i, i + MAX_CONCURRENT);
+          const batchPromises = batch.map((file, batchIdx) =>
+            processSingleFile(file, i + batchIdx, totalFiles)
+          );
+          const batchResults = await Promise.allSettled(batchPromises);
+          batchResults.forEach(r => {
+            results.push(r.status === 'fulfilled' ? r.value : { file: null, success: false, error: r.reason });
           });
-
-          // Phase 2: Processing complete (remaining 50%)
-          setProcessingStatus(`AI Processing ${file.name}...`);
-          setUploadProgress(Math.round(baseProgress + fileProgressRange));
-
-          // Generate a lightweight preview for history (only if < 2MB to save localStorage space)
-          let previewData = null;
-          if (file.size <= 2 * 1024 * 1024) {
-             try {
-                previewData = await new Promise((resolve) => {
-                  const reader = new FileReader();
-                  reader.onloadend = () => resolve(reader.result);
-                  reader.onerror = () => resolve(null);
-                  reader.readAsDataURL(file);
-                });
-             } catch (e) {
-                console.warn('Failed to generate preview for history', e);
-             }
-          }
-
-          // Save to history including the preview string
-          const savedEntry = saveToHistory(result, previewData);
-          results.push({ file, result: savedEntry, success: true });
-          setCompletedFiles(prev => [...prev, { name: file.name, success: true }]);
-
-        } catch (fileError) {
-          console.error(`Error processing ${file.name}:`, fileError);
-          results.push({ file, error: fileError, success: false });
-          setCompletedFiles(prev => [...prev, { name: file.name, success: false }]);
-          setFailedFiles(prev => [...prev, file]); // Track for retry
         }
       }
 
@@ -165,19 +192,15 @@ const UploadPage = ({ setCurrentResult, setUploadedFile, setResults }) => {
       // Pass all successful results to App
       const successfulResults = results.filter(r => r.success);
       if (successfulResults.length > 0) {
-        // Use new setResults API if available, otherwise fall back to legacy
         if (setResults) {
           const allResults = successfulResults.map(r => r.result);
           const allFiles = successfulResults.map(r => r.file);
           setResults(allResults, allFiles);
         } else {
-          // Legacy support - only show last result
           const lastResult = successfulResults[successfulResults.length - 1];
           setCurrentResult(lastResult.result);
           setUploadedFile(lastResult.file);
         }
-        
-        // Show success state - user clicks to navigate
         setUploadComplete(true);
       } else {
         setError('All files failed to process. Check the console for details.');

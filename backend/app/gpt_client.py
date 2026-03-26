@@ -91,7 +91,7 @@ else:
                 content.append({
                     "type": "image_url",
                     "image_url": {
-                        "url": f"data:image/png;base64,{img_b64}"
+                        "url": f"data:image/jpeg;base64,{img_b64}"
                     }
                 })
             
@@ -186,7 +186,7 @@ DOCUMENT TEXT:
 Return ONLY the JSON output, no explanations."""
 
         # Call LLM
-        raw_response = call_azure(system_prompt, user_prompt, max_tokens=2000, temperature=0.0)
+        raw_response = call_azure(system_prompt, user_prompt, max_tokens=1200, temperature=0.0)
         
         # Parse JSON
         parsed = parse_json_output(raw_response)
@@ -242,7 +242,7 @@ SCHEMA:
 Return ONLY the JSON output, no explanations."""
 
         # Call Vision API
-        raw_response = call_azure_vision(system_prompt, images_base64, user_text, max_tokens=2000, temperature=0.0)
+        raw_response = call_azure_vision(system_prompt, images_base64, user_text, max_tokens=1200, temperature=0.0)
         
         # Parse JSON
         parsed = parse_json_output(raw_response)

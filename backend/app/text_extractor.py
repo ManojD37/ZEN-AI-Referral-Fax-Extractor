@@ -10,43 +10,46 @@ import fitz  # PyMuPDF
 import docx
 from fastapi import UploadFile
 from app.log import logger
+from app.config import MAX_PAGES
+
+# Max dimension for images sent to Vision API (keeps quality, reduces payload drastically)
+MAX_IMAGE_DIMENSION = 1500
 
 
 def pdf_to_images_base64(pdf_path: str, dpi: int = 120) -> List[str]:
     """
-    Convert PDF pages to base64-encoded PNG images using PyMuPDF.
+    Convert PDF pages to base64-encoded JPEG images using PyMuPDF.
     
     Args:
         pdf_path: Path to PDF file
-        dpi: Resolution for rendering (150 is good balance of quality/size)
+        dpi: Resolution for rendering
         
     Returns:
-        List of base64-encoded PNG images (one per page)
+        List of base64-encoded JPEG images (one per page, capped at MAX_PAGES)
     """
     logger.info(f"Converting PDF to images: {pdf_path}")
     images_b64 = []
     
     try:
         doc = fitz.open(pdf_path)
-        logger.info(f"PDF has {len(doc)} pages")
+        total_pages = len(doc)
+        pages_to_process = min(total_pages, MAX_PAGES)
+        logger.info(f"PDF has {total_pages} pages, processing {pages_to_process}")
         
-        for page_num in range(len(doc)):
+        for page_num in range(pages_to_process):
             page = doc[page_num]
             
-            # Render page to pixmap (image)
-            # zoom factor: dpi/72 (72 is default DPI)
+            # Render page to pixmap
             zoom = dpi / 72
             mat = fitz.Matrix(zoom, zoom)
             pix = page.get_pixmap(matrix=mat)
             
-            # Convert to PNG bytes
-            img_bytes = pix.tobytes("png")
-            
-            # Encode to base64
-            img_b64 = base64.b64encode(img_bytes).decode('utf-8')
+            # Convert pixmap to PIL Image for resizing and JPEG compression
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            img_b64 = _resize_and_encode(img)
             images_b64.append(img_b64)
             
-            logger.info(f"Rendered page {page_num + 1}/{len(doc)}")
+            logger.info(f"Rendered page {page_num + 1}/{pages_to_process}")
         
         doc.close()
         logger.info(f"PDF conversion complete. Generated {len(images_b64)} images")
@@ -57,36 +60,46 @@ def pdf_to_images_base64(pdf_path: str, dpi: int = 120) -> List[str]:
         raise
 
 
+def _resize_and_encode(img: Image.Image) -> str:
+    """
+    Resize image to fit within MAX_IMAGE_DIMENSION and encode as base64 JPEG.
+    JPEG is 50-70% smaller than PNG, significantly reducing API payload.
+    """
+    # Downscale if larger than MAX_IMAGE_DIMENSION
+    if max(img.size) > MAX_IMAGE_DIMENSION:
+        img.thumbnail((MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION), Image.LANCZOS)
+    
+    # Ensure RGB mode for JPEG
+    if img.mode != 'RGB':
+        background = Image.new('RGB', img.size, (255, 255, 255))
+        if img.mode in ('RGBA', 'LA'):
+            background.paste(img, mask=img.split()[-1])
+        elif img.mode == 'P':
+            img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[-1])
+        else:
+            background.paste(img)
+        img = background
+    
+    buffer = BytesIO()
+    img.save(buffer, format='JPEG', quality=85)
+    return base64.b64encode(buffer.getvalue()).decode('utf-8')
+
+
 def image_to_base64(image_path: str) -> str:
     """
-    Convert image file to base64-encoded PNG.
+    Convert image file to base64-encoded JPEG (resized if too large).
     
     Args:
         image_path: Path to image file
         
     Returns:
-        Base64-encoded PNG image
+        Base64-encoded JPEG image
     """
     logger.info(f"Converting image to base64: {image_path}")
     try:
         img = Image.open(image_path)
-        
-        # Convert to RGB if needed (for transparency handling)
-        if img.mode in ('RGBA', 'LA', 'P'):
-            background = Image.new('RGB', img.size, (255, 255, 255))
-            if img.mode == 'P':
-                img = img.convert('RGBA')
-            background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
-            img = background
-        
-        # Save to bytes
-        buffer = BytesIO()
-        img.save(buffer, format='PNG')
-        img_bytes = buffer.getvalue()
-        
-        # Encode to base64
-        img_b64 = base64.b64encode(img_bytes).decode('utf-8')
-        
+        img_b64 = _resize_and_encode(img)
         logger.info(f"Image conversion complete")
         return img_b64
         
